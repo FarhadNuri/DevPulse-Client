@@ -1,5 +1,6 @@
 import type { Issue } from "../types";
 import type { ReactNode } from "react";
+import { formatDate, STATUS_LABELS, TYPE_LABELS } from "../utils";
 
 function Badge({ children, color }: { children: ReactNode; color: string }) {
   return (
@@ -21,25 +22,6 @@ const statusColors: Record<string, string> = {
   in_progress: "bg-in-progress/15 text-in-progress",
   resolved: "bg-resolved/15 text-resolved",
 };
-
-const statusLabels: Record<string, string> = {
-  open: "Open",
-  in_progress: "In Progress",
-  resolved: "Resolved",
-};
-
-const typeLabels: Record<string, string> = {
-  bug: "Bug",
-  feature_request: "Feature",
-};
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 
 interface IssueCardProps {
   issue: Issue;
@@ -77,8 +59,8 @@ export default function IssueCard({ issue, canEdit, canDelete, onEdit, onDelete 
         </div>
       </div>
       <div className="flex items-center gap-2 mt-3 flex-wrap">
-        <Badge color={typeColors[issue.type]}>{typeLabels[issue.type]}</Badge>
-        <Badge color={statusColors[issue.status]}>{statusLabels[issue.status]}</Badge>
+        <Badge color={typeColors[issue.type]}>{TYPE_LABELS[issue.type] ?? issue.type}</Badge>
+        <Badge color={statusColors[issue.status]}>{STATUS_LABELS[issue.status] ?? issue.status}</Badge>
         <span className="text-xs text-text-muted ml-auto">
           {issue.reporter?.name ?? "Unknown"} · {formatDate(issue.createdAt)}
         </span>
