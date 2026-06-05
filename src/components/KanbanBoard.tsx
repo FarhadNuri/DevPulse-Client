@@ -1,5 +1,17 @@
 import { useState, useCallback } from "react";
-import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCorners,
+  type DragStartEvent,
+  type DragEndEvent,
+  type DragOverEvent,
+} from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { issues as issuesApi } from "../api";
 import { useAuth } from "../hooks";
 import type { Issue, IssueType, IssueStatus } from "../types";
@@ -22,33 +34,49 @@ interface KanbanBoardProps {
   canEdit: boolean;
   canDelete: boolean;
   onEdit: (issue: Issue) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: number) => void;
   onRefetch: () => void;
   typeFilter: "all" | IssueType;
 }
 
-function KanbanCard({
+function SortableCard({
   issue,
   canEdit,
   canDelete,
   onEdit,
   onDelete,
-  isDragDisabled,
-  dragProps,
+  disabled,
 }: {
   issue: Issue;
   canEdit: boolean;
   canDelete: boolean;
   onEdit: (issue: Issue) => void;
-  onDelete: (id: string) => void;
-  isDragDisabled: boolean;
-  dragProps?: Record<string, unknown>;
+  onDelete: (id: number) => void;
+  disabled: boolean;
 }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: String(issue.id), disabled });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
   return (
     <div
-      {...dragProps}
-      className={`bg-bg-secondary border border-border rounded-lg p-3 transition ${
-        isDragDisabled
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={`bg-bg-secondary border border-border rounded-lg p-3 transition select-none ${
+        disabled
           ? "cursor-default"
           : "cursor-grab active:cursor-grabbing hover:border-border-focus/30"
       }`}
@@ -58,7 +86,10 @@ function KanbanCard({
         <div className="flex items-center gap-1 shrink-0">
           {canEdit && (
             <button
-              onClick={() => onEdit(issue)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(issue);
+              }}
               className="text-xs text-text-muted hover:text-text-primary transition px-1 py-0.5 rounded hover:bg-bg-tertiary"
             >
               Edit
@@ -66,7 +97,10 @@ function KanbanCard({
           )}
           {canDelete && (
             <button
-              onClick={() => onDelete(issue._id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(issue.id);
+              }}
               className="text-xs text-text-muted hover:text-red-400 transition px-1 py-0.5 rounded hover:bg-bg-tertiary"
             >
               Delete
@@ -79,7 +113,23 @@ function KanbanCard({
           {TYPE_LABELS[issue.type] ?? issue.type}
         </span>
         <span className="text-xs text-text-muted ml-auto">
-          {issue.reporter?.name ?? "Unknown"} · {formatDate(issue.createdAt)}
+          {issue.reporter?.name ?? "Unknown"} · {formatDate(issue.created_at)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function DragOverlayCard({ issue }: { issue: Issue }) {
+  return (
+    <div className="bg-bg-secondary border border-border-focus rounded-lg p-3 shadow-xl rotate-1">
+      <h4 className="text-sm font-semibold text-text-primary leading-snug mb-2">{issue.title}</h4>
+      <div className="flex items-center gap-2">
+        <span className={`text-xs font-medium rounded-md px-2 py-0.5 ${typeColors[issue.type]}`}>
+          {TYPE_LABELS[issue.type] ?? issue.type}
+        </span>
+        <span className="text-xs text-text-muted">
+          {issue.reporter?.name ?? "Unknown"}
         </span>
       </div>
     </div>
@@ -96,7 +146,13 @@ export default function KanbanBoard({
   typeFilter,
 }: KanbanBoardProps) {
   const { isLoggedIn } = useAuth();
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [overColumn, setOverColumn] = useState<string | null>(null);
   const [pendingDragId, setPendingDragId] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
 
   const filteredIssues = issues.filter((i) => {
     if (typeFilter !== "all" && i.type !== typeFilter) return false;
@@ -114,19 +170,68 @@ export default function KanbanBoard({
     }
   }
 
-  const onDragEnd = useCallback(
-    async (result: DropResult) => {
-      const { destination, source, draggableId } = result;
-      if (!destination) return;
-      if (destination.droppableId === source.droppableId) return;
-      if (!isLoggedIn) return;
+  const activeIssue = activeId
+    ? issues.find((i) => String(i.id) === activeId)
+    : null;
 
-      const newStatus = destination.droppableId as IssueStatus;
-      setPendingDragId(draggableId);
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveId(String(event.active.id));
+  }, []);
+
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    const over = event.over;
+    if (!over) {
+      setOverColumn(null);
+      return;
+    }
+    const overId = String(over.id);
+    if (STATUS_VALUES.includes(overId as IssueStatus)) {
+      setOverColumn(overId);
+    } else {
+      const overIssue = issues.find((i) => String(i.id) === overId);
+      if (overIssue) {
+        setOverColumn(overIssue.status);
+      }
+    }
+  }, [issues]);
+
+  const handleDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      const { active, over } = event;
+      setActiveId(null);
+      setOverColumn(null);
+
+      if (!over || !isLoggedIn) return;
+
+      const issueId = Number(active.id);
+
+      let targetStatus: IssueStatus | null = null;
+      const overId = String(over.id);
+
+      if (STATUS_VALUES.includes(overId as IssueStatus)) {
+        targetStatus = overId as IssueStatus;
+      } else {
+        const overIssue = issues.find((i) => String(i.id) === overId);
+        if (overIssue) {
+          targetStatus = overIssue.status;
+        }
+      }
+
+      if (!targetStatus) return;
+
+      const currentIssue = issues.find((i) => i.id === issueId);
+      if (!currentIssue || currentIssue.status === targetStatus) return;
+
+      setPendingDragId(String(issueId));
 
       try {
-        await issuesApi.update(draggableId, { status: newStatus });
-        toast.success(`Moved to ${STATUS_LABELS[newStatus] ?? newStatus}`);
+        await issuesApi.update(issueId, {
+          title: currentIssue.title,
+          description: currentIssue.description,
+          type: currentIssue.type,
+          status: targetStatus,
+        });
+        toast.success(`Moved to ${STATUS_LABELS[targetStatus]}`);
         onRefetch();
       } catch (err: unknown) {
         toast.error(err instanceof Error ? err.message : "Failed to move issue");
@@ -147,61 +252,64 @@ export default function KanbanBoard({
           </span>
         </div>
       )}
-      <DragDropContext onDragEnd={onDragEnd}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+      >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {columnConfig.map(({ status, label, accent }) => (
-            <div key={status} className={`rounded-lg border border-border border-t-2 ${accent} bg-bg-primary flex flex-col max-h-[calc(100vh-14rem)]`}>
-              <Droppable droppableId={status}>
-                {(provided, snapshot) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className={`flex-1 p-3 space-y-2 overflow-y-auto min-h-[6rem] rounded-b-lg transition-colors ${
-                      snapshot.isDraggingOver ? "bg-bg-tertiary/40" : ""
-                    }`}
-                  >
+          {columnConfig.map(({ status, label, accent }) => {
+            const columnIssues = columns[status] ?? [];
+            const isOver = overColumn === status;
+
+            return (
+              <div
+                key={status}
+                className={`rounded-lg border border-border border-t-2 ${accent} bg-bg-primary flex flex-col max-h-[calc(100vh-14rem)] transition-colors ${
+                  isOver ? "bg-bg-tertiary/20" : ""
+                }`}
+              >
+                <SortableContext
+                  id={status}
+                  items={columnIssues.map((i) => String(i.id))}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="flex-1 p-3 space-y-2 overflow-y-auto min-h-[6rem]">
                     <div className="flex items-center gap-2 mb-3 sticky top-0 bg-bg-primary py-1 z-10">
                       <h3 className="text-sm font-semibold text-text-primary">{label}</h3>
                       <span className="text-xs font-mono text-text-muted bg-bg-tertiary rounded-full px-2 py-0.5">
-                        {columns[status]?.length ?? 0}
+                        {columnIssues.length}
                       </span>
                     </div>
-                    {(columns[status] ?? []).map((issue, index) => (
-                      <Draggable
-                        key={issue._id}
-                        draggableId={issue._id}
-                        index={index}
-                        isDragDisabled={!isLoggedIn}
+                    {columnIssues.map((issue) => (
+                      <div
+                        key={issue.id}
+                        className={`transition-opacity ${
+                          pendingDragId === String(issue.id) ? "opacity-50" : ""
+                        }`}
                       >
-                        {(dragProvided) => (
-                          <div
-                            ref={dragProvided.innerRef}
-                            {...dragProvided.draggableProps}
-                            {...dragProvided.dragHandleProps}
-                            className={`transition-opacity ${
-                              pendingDragId === issue._id ? "opacity-50" : ""
-                            }`}
-                          >
-                            <KanbanCard
-                              issue={issue}
-                              canEdit={canEdit}
-                              canDelete={canDelete}
-                              onEdit={onEdit}
-                              onDelete={onDelete}
-                              isDragDisabled={!isLoggedIn}
-                            />
-                          </div>
-                        )}
-                      </Draggable>
+                        <SortableCard
+                          issue={issue}
+                          canEdit={canEdit}
+                          canDelete={canDelete}
+                          onEdit={onEdit}
+                          onDelete={onDelete}
+                          disabled={!isLoggedIn}
+                        />
+                      </div>
                     ))}
-                    {provided.placeholder}
                   </div>
-                )}
-              </Droppable>
-            </div>
-          ))}
+                </SortableContext>
+              </div>
+            );
+          })}
         </div>
-      </DragDropContext>
+        <DragOverlay>
+          {activeIssue ? <DragOverlayCard issue={activeIssue} /> : null}
+        </DragOverlay>
+      </DndContext>
     </div>
   );
 }

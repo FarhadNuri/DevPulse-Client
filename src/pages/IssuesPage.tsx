@@ -38,7 +38,7 @@ export default function IssuesPage() {
     fetchIssues();
   }, [fetchIssues]);
 
-  async function handleDelete(id: string) {
+  async function handleDelete(id: number) {
     if (!confirm("Delete this issue?")) return;
     try {
       await issuesApi.remove(id);
@@ -168,7 +168,7 @@ export default function IssuesPage() {
           <div className="space-y-3">
             {filtered.map((issue) => (
               <IssueCard
-                key={issue._id}
+                key={issue.id}
                 issue={issue}
                 canEdit={isLoggedIn}
                 canDelete={isLoggedIn && user?.role === "maintainer"}

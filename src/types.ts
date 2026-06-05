@@ -3,9 +3,9 @@ export type IssueType = "bug" | "feature_request";
 export type IssueStatus = "open" | "in_progress" | "resolved";
 
 export interface User {
-  id: string;
+  id: number;
   name: string;
-  email: string;
+  email?: string;
   role: Role;
 }
 
@@ -15,14 +15,14 @@ export interface AuthResponse {
 }
 
 export interface Issue {
-  _id: string;
+  id: number;
   title: string;
   description: string;
   type: IssueType;
   status: IssueStatus;
   reporter: User;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface CreateIssuePayload {

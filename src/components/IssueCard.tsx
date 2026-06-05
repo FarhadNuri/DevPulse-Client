@@ -28,7 +28,7 @@ interface IssueCardProps {
   canEdit: boolean;
   canDelete: boolean;
   onEdit: (issue: Issue) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: number) => void;
 }
 
 export default function IssueCard({ issue, canEdit, canDelete, onEdit, onDelete }: IssueCardProps) {
@@ -50,7 +50,7 @@ export default function IssueCard({ issue, canEdit, canDelete, onEdit, onDelete 
           )}
           {canDelete && (
             <button
-              onClick={() => onDelete(issue._id)}
+              onClick={() => onDelete(issue.id)}
               className="text-xs text-text-muted hover:text-red-400 transition px-1.5 py-0.5 rounded hover:bg-bg-tertiary"
             >
               Delete
@@ -62,7 +62,7 @@ export default function IssueCard({ issue, canEdit, canDelete, onEdit, onDelete 
         <Badge color={typeColors[issue.type]}>{TYPE_LABELS[issue.type] ?? issue.type}</Badge>
         <Badge color={statusColors[issue.status]}>{STATUS_LABELS[issue.status] ?? issue.status}</Badge>
         <span className="text-xs text-text-muted ml-auto">
-          {issue.reporter?.name ?? "Unknown"} · {formatDate(issue.createdAt)}
+          {issue.reporter?.name ?? "Unknown"} · {formatDate(issue.created_at)}
         </span>
       </div>
     </div>

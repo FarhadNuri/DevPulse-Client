@@ -38,7 +38,7 @@ export default function EditIssueModal({ open, onClose, issue, onUpdated }: Prop
     }
     setLoading(true);
     try {
-      await issues.update(issue._id, { title, description, type, status });
+      await issues.update(issue.id, { title, description, type, status });
       toast.success("Issue updated");
       onUpdated();
       onClose();

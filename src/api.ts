@@ -17,12 +17,13 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
 
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
-  const data = await res.json();
+  const json = await res.json();
 
-  if (!res.ok) {
-    throw new Error(data.message || data.error || "Request failed");
+  if (!res.ok || json.success === false) {
+    throw new Error(json.message || json.error || "Request failed");
   }
-  return data;
+
+  return json.data as T;
 }
 
 export const auth = {
@@ -39,9 +40,9 @@ export const issues = {
   create: (body: CreateIssuePayload) =>
     request<Issue>("/api/issues", { method: "POST", body: JSON.stringify(body) }),
 
-  update: (id: string, body: UpdateIssuePayload) =>
+  update: (id: number, body: UpdateIssuePayload) =>
     request<Issue>(`/api/issues/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
 
-  remove: (id: string) =>
+  remove: (id: number) =>
     request<void>(`/api/issues/${id}`, { method: "DELETE" }),
 };
