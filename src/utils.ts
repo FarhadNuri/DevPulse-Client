@@ -1,3 +1,5 @@
+import type { IssueStatus } from "./types";
+
 export function formatDate(dateStr: string | undefined | null): string {
   if (!dateStr) return "—";
   const date = new Date(dateStr);
@@ -11,6 +13,15 @@ export function formatDate(dateStr: string | undefined | null): string {
 
 export function normalizeStatus(status: string): string {
   return status.toLowerCase().replace(/\s+/g, "_");
+}
+
+export function denormalizeStatus(status: IssueStatus): string {
+  const map: Record<IssueStatus, string> = {
+    open: "Open",
+    in_progress: "In Progress",
+    resolved: "Resolved",
+  };
+  return map[status] || status;
 }
 
 export const STATUS_VALUES = ["open", "in_progress", "resolved"] as const;

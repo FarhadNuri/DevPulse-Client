@@ -3,6 +3,8 @@
 @theme {
   --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  
+  --font-size-base: 18px;
 
   --color-bg-primary: #0f0f0f;
   --color-bg-secondary: #1a1a1a;
