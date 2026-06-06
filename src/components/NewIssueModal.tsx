@@ -12,11 +12,14 @@ interface Props {
 }
 
 export default function NewIssueModal({ open, onClose, onCreated }: Props) {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, user } = useAuth();
+  const [appName, setAppName] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [type, setType] = useState<IssueType>("bug");
   const [loading, setLoading] = useState(false);
+
+  const isClient = user?.role === "client";
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -24,9 +27,17 @@ export default function NewIssueModal({ open, onClose, onCreated }: Props) {
       toast.error("Description must be at least 20 characters");
       return;
     }
+    if (isClient && !appName.trim()) {
+      toast.error("App name is required");
+      return;
+    }
     setLoading(true);
     try {
-      await issues.create({ title, description, type });
+      const payload: any = { title, description, type };
+      if (isClient) {
+        payload.app_name = appName;
+      }
+      await issues.create(payload);
       toast.success("Issue created");
       reset();
       onCreated();
@@ -39,6 +50,7 @@ export default function NewIssueModal({ open, onClose, onCreated }: Props) {
   }
 
   function reset() {
+    setAppName("");
     setTitle("");
     setDescription("");
     setType("bug");
@@ -50,11 +62,24 @@ export default function NewIssueModal({ open, onClose, onCreated }: Props) {
   }
 
   return (
-    <Modal open={open} onClose={handleClose} title="New Issue">
+    <Modal open={open} onClose={handleClose} title={isClient ? "Submit Issue" : "New Issue"}>
       {!isLoggedIn ? (
         <p className="text-sm text-text-secondary">You must be signed in to create issues.</p>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
+          {isClient && (
+            <div>
+              <label className="block text-sm text-text-secondary mb-1">App Name</label>
+              <input
+                type="text"
+                value={appName}
+                onChange={(e) => setAppName(e.target.value)}
+                required
+                className="w-full bg-bg-primary border border-border rounded-md px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-border-focus transition"
+                placeholder="e.g. MyShopApp"
+              />
+            </div>
+          )}
           <div>
             <label className="block text-sm text-text-secondary mb-1">Title</label>
             <input
@@ -92,9 +117,9 @@ export default function NewIssueModal({ open, onClose, onCreated }: Props) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-accent hover:bg-accent-hover text-white font-medium text-sm rounded-md py-2 transition disabled:opacity-50"
+            className="w-full bg-accent hover:bg-accent-hover text-white font-medium text-sm rounded-md py-2 transition disabled:opacity-50 cursor-pointer"
           >
-            {loading ? "Creating..." : "Create Issue"}
+            {loading ? "Creating..." : isClient ? "Submit Issue" : "Create Issue"}
           </button>
         </form>
       )}
