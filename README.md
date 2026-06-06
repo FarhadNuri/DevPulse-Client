@@ -10,11 +10,19 @@ DevPulse is a production-ready issue management platform designed for developmen
 
 ## Live Application
 
-> Explore Cartify in action:
+> Explore DevPulse in action:
 >
 > **🌐 https://devpulsev2.vercel.app/**
 >
 > Track issues, collaborate with teams, and deliver quality software
+
+## Backend Repo
+
+> Explore DevPulse backend:
+>
+> **🌐 https://github.com/FarhadNuri/Dev-Pulse-L2A2**
+>
+>
 
 
 ## Features
@@ -90,9 +98,7 @@ DevPulse is a production-ready issue management platform designed for developmen
 - **JWT** - Authentication tokens
 - **RESTful Architecture** - Clean API design
 
-### Deployment
-- **Vercel** - Frontend hosting
-- **GitHub** - Version control
+
 
 ## Project Architecture
 
