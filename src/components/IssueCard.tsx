@@ -65,7 +65,7 @@ export default function IssueCard({ issue, canEdit, canDelete, onEdit, onDelete,
                 e.stopPropagation();
                 onEdit(issue);
               }}
-              className="text-sm font-medium text-accent hover:text-accent-hover bg-accent/10 hover:bg-accent/20 transition px-3 py-1.5 rounded-md border border-accent/30 cursor-pointer"
+              className="cursor-pointer text-sm font-medium text-accent hover:text-accent-hover bg-accent/10 hover:bg-accent/20 transition px-3 py-1.5 rounded-md border border-accent/30 cursor-pointer"
             >
               Edit
             </button>
@@ -76,7 +76,7 @@ export default function IssueCard({ issue, canEdit, canDelete, onEdit, onDelete,
                 e.stopPropagation();
                 onDelete(issue.id);
               }}
-              className="text-sm font-medium text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 transition px-3 py-1.5 rounded-md border border-red-500/30 cursor-pointer"
+              className="cursor-pointer text-sm font-medium text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 transition px-3 py-1.5 rounded-md border border-red-500/30 cursor-pointer"
             >
               Delete
             </button>

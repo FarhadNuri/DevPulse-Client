@@ -99,7 +99,7 @@ export default function CommentSection({ issueId, isLoggedIn, currentUser, alway
       {!alwaysExpanded && (
         <button
           onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary transition"
+          className="cursor-pointer flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary transition"
         >
           <span>💬 Comments ({commentCount})</span>
           <svg
@@ -154,14 +154,14 @@ export default function CommentSection({ issueId, isLoggedIn, currentUser, alway
                             <button
                               onClick={() => handleDeleteComment(comment.id)}
                               disabled={deleting}
-                              className="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded bg-red-500/10 hover:bg-red-500/20 transition disabled:opacity-50"
+                              className="cursor-pointer text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded bg-red-500/10 hover:bg-red-500/20 transition disabled:opacity-50"
                             >
                               Yes
                             </button>
                             <button
                               onClick={() => setDeleteConfirmId(null)}
                               disabled={deleting}
-                              className="text-xs text-text-muted hover:text-text-primary px-2 py-1 rounded bg-bg-tertiary hover:bg-bg-tertiary/70 transition disabled:opacity-50"
+                              className="cursor-pointer text-xs text-text-muted hover:text-text-primary px-2 py-1 rounded bg-bg-tertiary hover:bg-bg-tertiary/70 transition disabled:opacity-50"
                             >
                               Cancel
                             </button>
@@ -169,7 +169,7 @@ export default function CommentSection({ issueId, isLoggedIn, currentUser, alway
                         ) : (
                           <button
                             onClick={() => setDeleteConfirmId(comment.id)}
-                            className="text-xs text-text-muted hover:text-red-400 transition p-1 hover:bg-red-500/10 rounded"
+                            className="text-xs text-text-muted hover:text-red-400 transition p-1 hover:bg-red-500/10 rounded cursor-pointer"
                             title="Delete comment"
                           >
                             <svg

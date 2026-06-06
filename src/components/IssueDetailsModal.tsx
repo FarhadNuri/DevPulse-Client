@@ -89,7 +89,7 @@ export default function IssueDetailsModal({
           </div>
           <button
             onClick={onClose}
-            className="text-text-muted hover:text-text-primary transition text-2xl leading-none shrink-0"
+            className="cursor-pointer text-text-muted hover:text-text-primary transition text-2xl leading-none shrink-0"
             title="Close"
           >
             ×

@@ -91,7 +91,7 @@ export default function SignupPage() {
             <select
               value={role}
               onChange={(e) => setRole(e.target.value as Role)}
-              className="w-full bg-bg-primary border border-border rounded-md px-4 py-3 md:px-4 md:py-3.5 text-base md:text-lg text-text-primary focus:outline-none focus:border-border-focus transition cursor-pointer"
+              className="cursor-pointer w-full bg-bg-primary border border-border rounded-md px-4 py-3 md:px-4 md:py-3.5 text-base md:text-lg text-text-primary focus:outline-none focus:border-border-focus transition cursor-pointer"
             >
               <option value="contributor">Contributor</option>
               <option value="maintainer">Maintainer</option>
@@ -101,7 +101,7 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-accent hover:bg-accent-hover text-white font-medium text-base md:text-lg rounded-md py-3 md:py-3.5 transition disabled:opacity-50"
+            className="cursor-pointer w-full bg-accent hover:bg-accent-hover text-white font-medium text-base md:text-lg rounded-md py-3 md:py-3.5 transition disabled:opacity-50"
           >
             {loading ? "Creating account..." : "Create account"}
           </button>

@@ -119,7 +119,7 @@ function SortableCard({
                   e.stopPropagation();
                   onEdit(issue);
                 }}
-                className="text-xs text-text-muted hover:text-text-primary transition px-1 py-0.5 rounded hover:bg-bg-tertiary"
+                className="text-xs text-text-muted hover:text-text-primary transition px-1 py-0.5 rounded hover:bg-bg-tertiary cursor-pointer"
               >
                 Edit
               </button>
@@ -130,7 +130,7 @@ function SortableCard({
                   e.stopPropagation();
                   onDelete(issue.id);
                 }}
-                className="text-xs text-text-muted hover:text-red-400 transition px-1 py-0.5 rounded hover:bg-bg-tertiary"
+                className="text-xs text-text-muted hover:text-red-400 transition px-1 py-0.5 rounded hover:bg-bg-tertiary cursor-pointer"
               >
                 Delete
               </button>

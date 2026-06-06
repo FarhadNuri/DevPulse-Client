@@ -27,7 +27,7 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
           <h2 className="text-lg font-semibold text-text-primary">{title}</h2>
           <button
             onClick={onClose}
-            className="text-text-muted hover:text-text-primary transition text-xl leading-none"
+            className="text-text-muted hover:text-text-primary transition text-xl leading-none cursor-pointer"
           >
             ×
           </button>
