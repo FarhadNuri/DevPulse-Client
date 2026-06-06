@@ -1,7 +1,5 @@
 # DevPulse - Issue Tracking & Collaboration Platform
 
-**Track issues, collaborate with teams, and deliver quality software**
-
 A modern, full-stack issue tracking system built with React and TypeScript, featuring role-based access control, real-time comments, and intuitive kanban boards.
 
 ## About
@@ -46,9 +44,11 @@ DevPulse is a production-ready issue management platform designed for developmen
 - **Type Safety** - Full TypeScript implementation
 - **Optimized Loading** - Prevents redirect on page reload
 
-### Key Features by Role
+---
 
-**Client**
+## Key Features by Role
+
+### Client
 - Submit issues with app name
 - Track submission approval status
 - View and comment on own submissions
