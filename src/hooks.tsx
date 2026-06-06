@@ -5,6 +5,7 @@ interface AuthState {
   user: User | null;
   token: string | null;
   isLoggedIn: boolean;
+  isLoading: boolean;
   login: (token: string, user: User) => void;
   logout: () => void;
 }
@@ -14,6 +15,7 @@ const AuthContext = createContext<AuthState | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const stored = localStorage.getItem("devpulse_token");
@@ -27,6 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem("devpulse_user");
       }
     }
+    setIsLoading(false);
   }, []);
 
   const login = useCallback((t: string, u: User) => {
@@ -44,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoggedIn: !!token, login, logout }}>
+    <AuthContext.Provider value={{ user, token, isLoggedIn: !!token, isLoading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
