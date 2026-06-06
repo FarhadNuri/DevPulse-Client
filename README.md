@@ -1,10 +1,21 @@
 # DevPulse - Issue Tracking & Collaboration Platform
 
+**Track issues, collaborate with teams, and deliver quality software**
+
 A modern, full-stack issue tracking system built with React and TypeScript, featuring role-based access control, real-time comments, and intuitive kanban boards.
 
 ## About
 
 DevPulse is a production-ready issue management platform designed for development teams and client collaboration. It streamlines bug tracking, feature requests, and client feedback with a clean, dark-themed interface. The application features secure authentication, comprehensive commenting system, and flexible views—all optimized for both desktop and mobile devices.
+
+## Live Application
+
+> Explore Cartify in action:
+>
+> **🌐 https://devpulsev2.vercel.app/**
+>
+> Track issues, collaborate with teams, and deliver quality software
+
 
 ## Features
 
