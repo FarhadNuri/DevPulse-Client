@@ -35,11 +35,11 @@ export default function ManageMaintainersPanel({ projectId }: { projectId: numbe
   }
 
   return (
-    <div className="border rounded-lg p-4 mb-6 bg-white shadow-sm">
-      <h3 className="font-semibold text-lg text-gray-900 mb-3 border-b pb-2">Maintainers</h3>
+    <div className="bg-bg-secondary border border-border rounded-lg p-4 mb-6 shadow-sm">
+      <h3 className="font-semibold text-lg text-text-primary mb-3 border-b border-border pb-2">Maintainers</h3>
       <div className="space-y-2 mb-4">
         {maintainers.map((m) => (
-          <div key={m.id} className="py-2 bg-gray-50 px-3 rounded-md font-medium text-gray-700">
+          <div key={m.id} className="py-2 bg-bg-tertiary px-3 rounded-md font-medium text-text-primary border border-border/50">
             {m.name}
           </div>
         ))}
@@ -47,13 +47,13 @@ export default function ManageMaintainersPanel({ projectId }: { projectId: numbe
 
       <form onSubmit={handleAdd} className="flex gap-3">
         <input
-          className="border border-gray-300 p-2.5 rounded-lg flex-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          className="bg-bg-primary border border-border rounded-md px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-border-focus transition flex-1"
           placeholder="User ID of a maintainer account"
           value={userId}
           onChange={(e) => setUserId(e.target.value)}
           disabled={loading}
         />
-        <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors" disabled={loading}>
+        <button type="submit" className="bg-accent hover:bg-accent-hover text-white px-5 py-2 rounded-md font-medium text-sm transition-colors cursor-pointer" disabled={loading}>
           {loading ? "Adding..." : "Add"}
         </button>
       </form>

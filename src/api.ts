@@ -1,6 +1,6 @@
 import type { AuthResponse, CreateIssuePayload, Issue, UpdateIssuePayload, ApprovalAction, Comment } from "./types";
 
-const BASE_URL = "https://dev-pulse-l2-a2.vercel.app";
+const BASE_URL = import.meta.env?.DEV ? "http://localhost:5000" : "https://dev-pulse-l2-a2.vercel.app";
 
 function getToken(): string | null {
   return localStorage.getItem("devpulse_token");
@@ -111,4 +111,6 @@ export const projects = {
   listMaintainers: (id: string) => request<any>(`/api/projects/${id}/maintainers`),
   addMaintainer: (id: string, userId: string) =>
     request<any>(`/api/projects/${id}/maintainers`, { method: "POST", body: JSON.stringify({ userId }) }),
+  addContributor: (id: string, userId: string) =>
+    request<any>(`/api/projects/${id}/contributors`, { method: "POST", body: JSON.stringify({ userId }) }),
 };

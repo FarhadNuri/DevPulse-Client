@@ -14,12 +14,13 @@ import KanbanBoard from "../components/KanbanBoard";
 import ClientDashboard from "../components/ClientDashboard";
 import PendingApprovalPanel from "../components/PendingApprovalPanel";
 import { normalizeStatus } from "../utils";
-import AccessRequestsPanel from "../components/AccessRequestsPanel";
 import ManageMaintainersPanel from "../components/ManageMaintainersPanel";
 import { projects as projectsApi } from "../api";
 
+import ContributorsPanel from "../components/ContributorsPanel";
+
 type ViewMode = "list" | "board";
-type TabMode = "all" | "pending";
+type TabMode = "all" | "pending" | "maintainers" | "contributors";
 
 export default function IssuesPage() {
   const { isLoggedIn, user, isLoading } = useAuth();
@@ -167,18 +168,27 @@ export default function IssuesPage() {
                 </span>
               )}
             </button>
+            <button
+              onClick={() => setActiveTab("maintainers")}
+              className={tabCls(activeTab === "maintainers")}
+            >
+              Maintainers
+            </button>
+            <button
+              onClick={() => setActiveTab("contributors")}
+              className={tabCls(activeTab === "contributors")}
+            >
+              Contributors
+            </button>
           </div>
-        )}
-
-        {isMaintainer && (
-          <>
-            <AccessRequestsPanel projectId={projectId} />
-            <ManageMaintainersPanel projectId={projectId} />
-          </>
         )}
 
         {activeTab === "pending" ? (
           <PendingApprovalPanel onCountChange={setPendingCount} />
+        ) : activeTab === "maintainers" ? (
+          <ManageMaintainersPanel projectId={projectId} />
+        ) : activeTab === "contributors" ? (
+          <ContributorsPanel projectId={projectId} />
         ) : (
           <>
             <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
