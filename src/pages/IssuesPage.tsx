@@ -11,7 +11,6 @@ import NewIssueModal from "../components/NewIssueModal";
 import EditIssueModal from "../components/EditIssueModal";
 import IssueDetailsModal from "../components/IssueDetailsModal";
 import KanbanBoard from "../components/KanbanBoard";
-import ClientDashboard from "../components/ClientDashboard";
 import PendingApprovalPanel from "../components/PendingApprovalPanel";
 import { normalizeStatus } from "../utils";
 import ManageMaintainersPanel from "../components/ManageMaintainersPanel";
@@ -88,10 +87,7 @@ export default function IssuesPage() {
     }
   }, [fetchIssues, activeTab, isClient]);
 
-  // If client, render ClientDashboard instead
-  if (isClient) {
-    return <ClientDashboard />;
-  }
+  // Client view handling is now integrated below instead of a separate component
 
   // Show loading spinner while checking auth or access
   if (isLoading || allowed === null) {
@@ -260,7 +256,7 @@ export default function IssuesPage() {
                     onClick={() => setNewModalOpen(true)}
                     className="bg-accent hover:bg-accent-hover text-white font-medium text-sm rounded-md px-4 py-2 transition cursor-pointer"
                   >
-                    New Issue
+                    {isClient ? "Raise a Ticket" : "New Issue"}
                   </button>
                 )}
               </div>
@@ -271,8 +267,8 @@ export default function IssuesPage() {
             ) : viewMode === "board" ? (
               <KanbanBoard
                 issues={issueList}
-                canEdit={isLoggedIn}
-                canDelete={isLoggedIn && user?.role === "maintainer"}
+                canEdit={isLoggedIn && !isClient}
+                canDelete={isLoggedIn && isMaintainer}
                 onEdit={setEditIssue}
                 onDelete={handleDelete}
                 onRefetch={fetchIssues}
@@ -297,8 +293,8 @@ export default function IssuesPage() {
                   <IssueCard
                     key={issue.id}
                     issue={issue}
-                    canEdit={isLoggedIn}
-                    canDelete={isLoggedIn && user?.role === "maintainer"}
+                    canEdit={isLoggedIn && !isClient}
+                    canDelete={isLoggedIn && isMaintainer}
                     onEdit={setEditIssue}
                     onDelete={handleDelete}
                     isLoggedIn={isLoggedIn}

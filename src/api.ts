@@ -96,8 +96,10 @@ export const comments = {
 
 export const projects = {
   list: () => request<any>("/api/projects"),
+  pending: () => request<any>("/api/projects/pending"),
   create: (name: string) => request<any>("/api/projects", { method: "POST", body: JSON.stringify({ name }) }),
   get: (id: string) => request<any>(`/api/projects/${id}`),
+  approve: (id: string, action: "approved" | "rejected") => request<any>(`/api/projects/${id}/approve`, { method: "PATCH", body: JSON.stringify({ action }) }),
 
   requestAccess: (id: string) => request<any>(`/api/projects/${id}/request-access`, { method: "POST" }),
   listRequests: (id: string) => request<any>(`/api/projects/${id}/access-requests`),
