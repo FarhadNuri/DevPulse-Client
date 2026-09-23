@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { issues as issuesApi } from "../api";
 import { useAuth } from "../hooks";
 import type { Issue, IssueType, IssueStatus } from "../types";
