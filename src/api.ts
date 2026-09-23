@@ -75,7 +75,7 @@ export const comments = {
   create: (issueId: number, body: string) => {
     const token = getToken();
     if (!token) throw new Error("Authentication required");
-    
+
     return request<Comment>(`/api/issues/${issueId}/comments`, {
       method: "POST",
       body: JSON.stringify({ body }),
@@ -86,10 +86,29 @@ export const comments = {
   remove: (commentId: number) => {
     const token = getToken();
     if (!token) throw new Error("Authentication required");
-    
+
     return request<void>(`/api/comments/${commentId}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });
   },
+};
+
+export const projects = {
+  list: () => request<any>("/api/projects"),
+  create: (name: string) => request<any>("/api/projects", { method: "POST", body: JSON.stringify({ name }) }),
+  get: (id: string) => request<any>(`/api/projects/${id}`),
+
+  requestAccess: (id: string) => request<any>(`/api/projects/${id}/request-access`, { method: "POST" }),
+  listRequests: (id: string) => request<any>(`/api/projects/${id}/access-requests`),
+  decideRequest: (id: string, memberId: string, action: "approve" | "reject") =>
+    request<any>(`/api/projects/${id}/access-requests/${memberId}`, { method: "PATCH", body: JSON.stringify({ action }) }),
+
+  listContributors: (id: string) => request<any>(`/api/projects/${id}/contributors`),
+  revokeContributor: (id: string, memberId: string) =>
+    request<any>(`/api/projects/${id}/contributors/${memberId}/revoke`, { method: "PATCH" }),
+
+  listMaintainers: (id: string) => request<any>(`/api/projects/${id}/maintainers`),
+  addMaintainer: (id: string, userId: string) =>
+    request<any>(`/api/projects/${id}/maintainers`, { method: "POST", body: JSON.stringify({ userId }) }),
 };
