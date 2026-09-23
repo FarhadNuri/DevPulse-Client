@@ -4,6 +4,7 @@ import { AuthProvider } from "./hooks";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import IssuesPage from "./pages/IssuesPage";
+import ProjectsGridPage from "./pages/ProjectsGridPage";
 import Footer from "./components/Footer";
 
 function AppContent() {
@@ -13,7 +14,9 @@ function AppContent() {
   return (
     <div className="min-h-screen flex flex-col text-base">
       <Routes>
-        <Route path="/" element={<IssuesPage />} />
+        <Route path="/" element={<Navigate to="/projects" replace />} />
+        <Route path="/projects" element={<ProjectsGridPage />} />
+        <Route path="/projects/:id" element={<IssuesPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

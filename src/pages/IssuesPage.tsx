@@ -14,6 +14,9 @@ import KanbanBoard from "../components/KanbanBoard";
 import ClientDashboard from "../components/ClientDashboard";
 import PendingApprovalPanel from "../components/PendingApprovalPanel";
 import { normalizeStatus } from "../utils";
+import AccessRequestsPanel from "../components/AccessRequestsPanel";
+import ManageMaintainersPanel from "../components/ManageMaintainersPanel";
+import { projects as projectsApi } from "../api";
 
 type ViewMode = "list" | "board";
 type TabMode = "all" | "pending";
@@ -32,9 +35,18 @@ export default function IssuesPage() {
   const [activeTab, setActiveTab] = useState<TabMode>("all");
   const [pendingCount, setPendingCount] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
+  const { id } = useParams();
+  const projectId = Number(id || 0);
+  const [allowed, setAllowed] = useState<boolean | null>(null);
 
   const isMaintainer = user?.role === "maintainer";
   const isClient = user?.role === "client";
+
+  useEffect(() => {
+    projectsApi.get(String(projectId))
+      .then(() => setAllowed(true))
+      .catch(() => setAllowed(false));
+  }, [projectId]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -52,7 +64,7 @@ export default function IssuesPage() {
         setViewMode("list");
       }
     };
-    
+
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
@@ -60,14 +72,14 @@ export default function IssuesPage() {
 
   const fetchIssues = useCallback(async () => {
     try {
-      const data = await issuesApi.list();
+      const data = await issuesApi.list(projectId);
       setIssueList(data);
     } catch {
       toast.error("Failed to load issues");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [projectId]);
 
   useEffect(() => {
     if (activeTab === "all" && !isClient) {
@@ -80,11 +92,22 @@ export default function IssuesPage() {
     return <ClientDashboard />;
   }
 
-  // Show loading spinner while checking auth
-  if (isLoading) {
+  // Show loading spinner while checking auth or access
+  if (isLoading || allowed === null) {
     return (
       <div className="min-h-screen bg-bg-primary flex items-center justify-center">
         <Spinner />
+      </div>
+    );
+  }
+
+  if (!allowed) {
+    return (
+      <div className="min-h-screen bg-bg-primary flex flex-col">
+        <Header />
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-gray-500 text-lg">You don't have access to this project.</p>
+        </div>
       </div>
     );
   }
@@ -110,17 +133,15 @@ export default function IssuesPage() {
     "bg-bg-primary border border-border rounded-md px-3 py-1.5 text-sm text-text-primary focus:outline-none focus:border-border-focus transition appearance-none cursor-pointer";
 
   const viewToggleCls = (active: boolean) =>
-    `px-3 py-1.5 text-sm font-medium rounded-md transition cursor-pointer ${
-      active
-        ? "bg-accent text-white"
-        : "bg-bg-tertiary text-text-secondary hover:text-text-primary"
+    `px-3 py-1.5 text-sm font-medium rounded-md transition cursor-pointer ${active
+      ? "bg-accent text-white"
+      : "bg-bg-tertiary text-text-secondary hover:text-text-primary"
     }`;
 
   const tabCls = (active: boolean) =>
-    `px-4 py-2 text-sm font-medium border-b-2 transition cursor-pointer ${
-      active
-        ? "border-accent text-text-primary"
-        : "border-transparent text-text-secondary hover:text-text-primary"
+    `px-4 py-2 text-sm font-medium border-b-2 transition cursor-pointer ${active
+      ? "border-accent text-text-primary"
+      : "border-transparent text-text-secondary hover:text-text-primary"
     }`;
 
   return (
@@ -147,6 +168,13 @@ export default function IssuesPage() {
               )}
             </button>
           </div>
+        )}
+
+        {isMaintainer && (
+          <>
+            <AccessRequestsPanel projectId={projectId} />
+            <ManageMaintainersPanel projectId={projectId} />
+          </>
         )}
 
         {activeTab === "pending" ? (
@@ -276,6 +304,7 @@ export default function IssuesPage() {
 
       <NewIssueModal
         open={newModalOpen}
+        projectId={projectId}
         onClose={() => setNewModalOpen(false)}
         onCreated={fetchIssues}
       />

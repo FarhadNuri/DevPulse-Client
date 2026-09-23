@@ -35,12 +35,12 @@ export const auth = {
 };
 
 export const issues = {
-  list: () => request<Issue[]>("/api/issues"),
+  list: (projectId: number) => request<Issue[]>(`/api/projects/${projectId}/issues`),
 
   pending: () => request<Issue[]>("/api/issues/pending"),
 
-  create: (body: CreateIssuePayload) =>
-    request<Issue>("/api/issues", { method: "POST", body: JSON.stringify(body) }),
+  create: (projectId: number, body: CreateIssuePayload) =>
+    request<Issue>(`/api/projects/${projectId}/issues`, { method: "POST", body: JSON.stringify(body) }),
 
   update: (id: number, body: UpdateIssuePayload) =>
     request<Issue>(`/api/issues/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
