@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { projects as projectsApi } from "../api";
+import Modal from "./Modal";
 
 export default function NewProjectModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [name, setName] = useState("");
@@ -19,26 +20,27 @@ export default function NewProjectModal({ onClose, onCreated }: { onClose: () =>
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl shadow-xl w-full max-w-sm">
-        <h2 className="text-xl font-bold mb-4 text-gray-900">New Project</h2>
-        <input
-          className="border border-gray-300 w-full p-2.5 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-          placeholder="Project name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          autoFocus
-          disabled={loading}
-        />
-        <div className="flex justify-end gap-3">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors" disabled={loading}>
-            Cancel
-          </button>
-          <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium transition-colors" disabled={loading}>
-            {loading ? "Creating..." : "Create"}
-          </button>
+    <Modal open={true} onClose={onClose} title="New Project">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm text-text-secondary mb-1">Project Name</label>
+          <input
+            className="w-full bg-bg-primary border border-border rounded-md px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-border-focus transition"
+            placeholder="e.g. Acme Website"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoFocus
+            disabled={loading}
+          />
         </div>
+        <button 
+          type="submit" 
+          className="w-full bg-accent hover:bg-accent-hover text-white font-medium text-sm rounded-md py-2 transition disabled:opacity-50 cursor-pointer" 
+          disabled={loading}
+        >
+          {loading ? "Creating..." : "Create"}
+        </button>
       </form>
-    </div>
+    </Modal>
   );
 }

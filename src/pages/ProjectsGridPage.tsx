@@ -4,6 +4,7 @@ import { useAuth } from "../hooks";
 import ProjectCard from "../components/ProjectCard";
 import NewProjectModal from "../components/NewProjectModal";
 import { useNavigate } from "react-router-dom";
+import Header from "../components/Header";
 
 export default function ProjectsGridPage() {
   const { user } = useAuth();
@@ -36,17 +37,19 @@ export default function ProjectsGridPage() {
   if (!user) return null;
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Projects</h1>
-        {user.role === "maintainer" && (
-          <button className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors" onClick={() => setShowModal(true)}>
-            New Project
-          </button>
-        )}
-      </div>
+    <div className="min-h-screen bg-bg-primary">
+      <Header />
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-semibold text-text-primary">Projects</h1>
+          {user.role === "maintainer" && (
+            <button className="bg-accent hover:bg-accent-hover text-white px-4 py-2 rounded-md font-medium text-sm transition-colors cursor-pointer" onClick={() => setShowModal(true)}>
+              New Project
+            </button>
+          )}
+        </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {list.map((project) => (
           <ProjectCard
             key={project.id}
@@ -57,7 +60,7 @@ export default function ProjectsGridPage() {
           />
         ))}
         {list.length === 0 && (
-          <div className="col-span-full text-center py-12 text-gray-500">
+          <div className="col-span-full text-center py-16 text-text-muted">
             No projects found.
           </div>
         )}
@@ -72,6 +75,7 @@ export default function ProjectsGridPage() {
           }}
         />
       )}
+      </main>
     </div>
   );
 }

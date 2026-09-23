@@ -11,21 +11,21 @@ export default function ProjectCard({ project, isMaintainer, onOpen, onRequestAc
   const locked = !isMaintainer && project.access_status !== "approved";
 
   return (
-    <div className="border rounded-lg p-4 shadow-sm bg-white hover:shadow-md transition-shadow">
-      <h3 className="font-semibold text-lg text-gray-800">{project.name}</h3>
+    <div className="bg-bg-secondary border border-border rounded-lg p-4 shadow-sm hover:border-border-focus/30 transition-colors">
+      <h3 className="text-base font-semibold text-text-primary">{project.name}</h3>
 
       {!locked && (
-        <button className="mt-3 text-blue-600 hover:text-blue-800 font-medium" onClick={() => onOpen(project.id)}>
+        <button className="mt-4 cursor-pointer text-sm font-medium text-accent hover:text-accent-hover bg-accent/10 hover:bg-accent/20 transition px-4 py-2 rounded-md border border-accent/30" onClick={() => onOpen(project.id)}>
           Open board
         </button>
       )}
 
       {locked && project.access_status === "pending" && (
-        <span className="mt-3 inline-block text-yellow-600 font-medium">Pending approval</span>
+        <span className="mt-4 inline-block text-amber-500 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-md text-sm font-medium">Pending approval</span>
       )}
 
       {locked && (project.access_status === "rejected" || project.access_status === "revoked" || !project.access_status) && (
-        <button className="mt-3 text-blue-600 hover:text-blue-800 font-medium" onClick={() => onRequestAccess(project.id)}>
+        <button className="mt-4 cursor-pointer text-sm font-medium text-accent hover:text-accent-hover bg-accent/10 hover:bg-accent/20 transition px-4 py-2 rounded-md border border-accent/30" onClick={() => onRequestAccess(project.id)}>
           Request access
         </button>
       )}
