@@ -136,9 +136,8 @@ export default function CommentSection({ issueId, isLoggedIn, currentUser, alway
                         {comment.author.name}
                       </span>
                       <span
-                        className={`text-xs font-medium rounded-md px-2 py-0.5 ${
-                          roleColors[comment.author.role]
-                        }`}
+                        className={`text-xs font-medium rounded-md px-2 py-0.5 ${roleColors[comment.author.role]
+                          }`}
                       >
                         {comment.author.role}
                       </span>
@@ -210,9 +209,8 @@ export default function CommentSection({ issueId, isLoggedIn, currentUser, alway
               />
               <div className="flex items-center justify-between">
                 <span
-                  className={`text-xs ${
-                    charCount > maxChars ? "text-red-400" : "text-text-muted"
-                  }`}
+                  className={`text-xs ${charCount > maxChars ? "text-red-400" : "text-text-muted"
+                    }`}
                 >
                   {charCount} / {maxChars}
                 </span>
