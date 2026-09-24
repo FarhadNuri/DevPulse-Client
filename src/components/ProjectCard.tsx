@@ -1,4 +1,3 @@
-import React from 'react';
 
 type Props = {
   project: { id: number; name: string; access_status?: string | null; approval_status?: string };

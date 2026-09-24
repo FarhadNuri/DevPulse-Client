@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { projects as projectsApi } from "../api";
 import { useAuth } from "../hooks";
 import ProjectCard from "../components/ProjectCard";
