@@ -1,6 +1,6 @@
 import type { AuthResponse, CreateIssuePayload, Issue, UpdateIssuePayload, ApprovalAction, Comment } from "./types";
 
-const BASE_URL = import.meta.env?.DEV ? "http://localhost:5000" : "https://dev-pulse-l2-a2.vercel.app";
+const BASE_URL = import.meta.env?.DEV ? "http://localhost:5000" : (import.meta.env.VITE_API_URL || "https://dev-pulse-l2-a2.vercel.app");
 
 function getToken(): string | null {
   return localStorage.getItem("devpulse_token");
