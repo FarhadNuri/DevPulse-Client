@@ -7,11 +7,12 @@ import Modal from "./Modal";
 
 interface Props {
   open: boolean;
+  projectId: number;
   onClose: () => void;
   onCreated: () => void;
 }
 
-export default function NewIssueModal({ open, onClose, onCreated }: Props) {
+export default function NewIssueModal({ open, projectId, onClose, onCreated }: Props) {
   const { isLoggedIn, user } = useAuth();
   const [appName, setAppName] = useState("");
   const [title, setTitle] = useState("");
@@ -37,7 +38,7 @@ export default function NewIssueModal({ open, onClose, onCreated }: Props) {
       if (isClient) {
         payload.app_name = appName;
       }
-      await issues.create(payload);
+      await issues.create(projectId, payload);
       toast.success("Issue created");
       reset();
       onCreated();

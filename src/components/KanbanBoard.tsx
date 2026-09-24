@@ -97,13 +97,12 @@ function SortableCard({
       style={style}
       {...attributes}
       {...listeners}
-      className={`bg-bg-secondary border border-border rounded-lg p-3 transition select-none ${
-        disabled
+      className={`bg-bg-secondary border border-border rounded-lg p-3 transition select-none ${disabled
           ? "cursor-default"
           : "cursor-grab active:cursor-grabbing hover:border-border-focus/30"
-      }`}
+        }`}
     >
-      <div 
+      <div
         className="cursor-pointer"
         onClick={(e) => {
           e.stopPropagation();
@@ -184,27 +183,25 @@ function DragOverlayCard({ issue }: { issue: Issue }) {
   );
 }
 
-function DroppableColumn({ 
-  children, 
+function DroppableColumn({
+  children,
   id,
-  isOver 
-}: { 
-  children: ReactNode; 
+  isOver
+}: {
+  children: ReactNode;
   id: string;
   isOver: boolean;
 }) {
   const { setNodeRef } = useDroppable({ id });
-  
+
   return (
-    <div 
+    <div
       ref={setNodeRef}
-      className={`rounded-lg border border-border border-t-2 ${
-        id === 'open' ? 'border-t-open' : 
-        id === 'in_progress' ? 'border-t-in-progress' : 
-        'border-t-resolved'
-      } bg-bg-primary flex flex-col max-h-[calc(100vh-14rem)] transition-colors ${
-        isOver ? "bg-bg-tertiary/20" : ""
-      }`}
+      className={`rounded-lg border border-border border-t-2 ${id === 'open' ? 'border-t-open' :
+          id === 'in_progress' ? 'border-t-in-progress' :
+            'border-t-resolved'
+        } bg-bg-primary flex flex-col max-h-[calc(100vh-14rem)] transition-colors ${isOver ? "bg-bg-tertiary/20" : ""
+        }`}
     >
       {children}
     </div>
@@ -299,7 +296,7 @@ export default function KanbanBoard({
 
       const currentIssue = issues.find((i) => i.id === issueId);
       if (!currentIssue) return;
-      
+
       const currentNormalized = currentIssue.status.toLowerCase().replace(/\s+/g, "_");
       if (currentNormalized === targetStatus) return;
 
@@ -310,9 +307,9 @@ export default function KanbanBoard({
           const normalized = i.status.toLowerCase().replace(/\s+/g, "_");
           return normalized === targetStatus;
         });
-        
+
         const statusToSend = sampleIssueInTargetColumn?.status || targetStatus;
-        
+
         await issuesApi.update(issueId, {
           status: statusToSend as any,
         });
@@ -365,9 +362,8 @@ export default function KanbanBoard({
                     {columnIssues.map((issue) => (
                       <div
                         key={issue.id}
-                        className={`transition-opacity ${
-                          pendingDragId === String(issue.id) ? "opacity-50" : ""
-                        }`}
+                        className={`transition-opacity ${pendingDragId === String(issue.id) ? "opacity-50" : ""
+                          }`}
                       >
                         <SortableCard
                           issue={issue}

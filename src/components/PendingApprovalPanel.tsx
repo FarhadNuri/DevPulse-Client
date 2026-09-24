@@ -32,7 +32,7 @@ function PendingIssueCard({ issue, onApprove, onReject, processing }: PendingIss
       )}
       <h3 className="text-sm font-semibold text-text-primary mb-1">{issue.title}</h3>
       <p className="text-xs text-text-muted mb-3 line-clamp-2">{issue.description}</p>
-      
+
       <div className="flex items-center gap-2 flex-wrap mb-3">
         <Badge color={typeColors[issue.type]}>{TYPE_LABELS[issue.type] ?? issue.type}</Badge>
         <Badge color="bg-blue-500/15 text-blue-400">Client</Badge>

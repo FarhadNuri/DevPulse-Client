@@ -1,6 +1,6 @@
 import type { AuthResponse, CreateIssuePayload, Issue, UpdateIssuePayload, ApprovalAction, Comment } from "./types";
 
-const BASE_URL = "https://dev-pulse-l2-a2.vercel.app";
+const BASE_URL = import.meta.env?.DEV ? "http://localhost:5000" : "https://dev-pulse-l2-a2.vercel.app";
 
 function getToken(): string | null {
   return localStorage.getItem("devpulse_token");
@@ -35,12 +35,12 @@ export const auth = {
 };
 
 export const issues = {
-  list: () => request<Issue[]>("/api/issues"),
+  list: (projectId: number) => request<Issue[]>(`/api/projects/${projectId}/issues`),
 
   pending: () => request<Issue[]>("/api/issues/pending"),
 
-  create: (body: CreateIssuePayload) =>
-    request<Issue>("/api/issues", { method: "POST", body: JSON.stringify(body) }),
+  create: (projectId: number, body: CreateIssuePayload) =>
+    request<Issue>(`/api/projects/${projectId}/issues`, { method: "POST", body: JSON.stringify(body) }),
 
   update: (id: number, body: UpdateIssuePayload) =>
     request<Issue>(`/api/issues/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
@@ -75,7 +75,7 @@ export const comments = {
   create: (issueId: number, body: string) => {
     const token = getToken();
     if (!token) throw new Error("Authentication required");
-    
+
     return request<Comment>(`/api/issues/${issueId}/comments`, {
       method: "POST",
       body: JSON.stringify({ body }),
@@ -86,10 +86,33 @@ export const comments = {
   remove: (commentId: number) => {
     const token = getToken();
     if (!token) throw new Error("Authentication required");
-    
+
     return request<void>(`/api/comments/${commentId}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });
   },
+};
+
+export const projects = {
+  list: () => request<any>("/api/projects"),
+  pending: () => request<any>("/api/projects/pending"),
+  create: (name: string) => request<any>("/api/projects", { method: "POST", body: JSON.stringify({ name }) }),
+  get: (id: string) => request<any>(`/api/projects/${id}`),
+  approve: (id: string, action: "approved" | "rejected") => request<any>(`/api/projects/${id}/approve`, { method: "PATCH", body: JSON.stringify({ action }) }),
+
+  requestAccess: (id: string) => request<any>(`/api/projects/${id}/request-access`, { method: "POST" }),
+  listRequests: (id: string) => request<any>(`/api/projects/${id}/access-requests`),
+  decideRequest: (id: string, memberId: string, action: "approve" | "reject") =>
+    request<any>(`/api/projects/${id}/access-requests/${memberId}`, { method: "PATCH", body: JSON.stringify({ action }) }),
+
+  listContributors: (id: string) => request<any>(`/api/projects/${id}/contributors`),
+  revokeContributor: (id: string, memberId: string) =>
+    request<any>(`/api/projects/${id}/contributors/${memberId}/revoke`, { method: "PATCH" }),
+
+  listMaintainers: (id: string) => request<any>(`/api/projects/${id}/maintainers`),
+  addMaintainer: (id: string, userId: string) =>
+    request<any>(`/api/projects/${id}/maintainers`, { method: "POST", body: JSON.stringify({ userId }) }),
+  addContributor: (id: string, userId: string) =>
+    request<any>(`/api/projects/${id}/contributors`, { method: "POST", body: JSON.stringify({ userId }) }),
 };

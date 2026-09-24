@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { issues as issuesApi } from "../api";
 import { useAuth } from "../hooks";
 import type { Issue, IssueType, IssueStatus } from "../types";
@@ -11,12 +11,15 @@ import NewIssueModal from "../components/NewIssueModal";
 import EditIssueModal from "../components/EditIssueModal";
 import IssueDetailsModal from "../components/IssueDetailsModal";
 import KanbanBoard from "../components/KanbanBoard";
-import ClientDashboard from "../components/ClientDashboard";
 import PendingApprovalPanel from "../components/PendingApprovalPanel";
 import { normalizeStatus } from "../utils";
+import ManageMaintainersPanel from "../components/ManageMaintainersPanel";
+import { projects as projectsApi } from "../api";
+
+import ContributorsPanel from "../components/ContributorsPanel";
 
 type ViewMode = "list" | "board";
-type TabMode = "all" | "pending";
+type TabMode = "all" | "pending" | "maintainers" | "contributors";
 
 export default function IssuesPage() {
   const { isLoggedIn, user, isLoading } = useAuth();
@@ -32,9 +35,18 @@ export default function IssuesPage() {
   const [activeTab, setActiveTab] = useState<TabMode>("all");
   const [pendingCount, setPendingCount] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
+  const { id } = useParams();
+  const projectId = Number(id || 0);
+  const [allowed, setAllowed] = useState<boolean | null>(null);
 
   const isMaintainer = user?.role === "maintainer";
   const isClient = user?.role === "client";
+
+  useEffect(() => {
+    projectsApi.get(String(projectId))
+      .then(() => setAllowed(true))
+      .catch(() => setAllowed(false));
+  }, [projectId]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -52,7 +64,7 @@ export default function IssuesPage() {
         setViewMode("list");
       }
     };
-    
+
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
@@ -60,14 +72,14 @@ export default function IssuesPage() {
 
   const fetchIssues = useCallback(async () => {
     try {
-      const data = await issuesApi.list();
+      const data = await issuesApi.list(projectId);
       setIssueList(data);
     } catch {
       toast.error("Failed to load issues");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [projectId]);
 
   useEffect(() => {
     if (activeTab === "all" && !isClient) {
@@ -75,16 +87,24 @@ export default function IssuesPage() {
     }
   }, [fetchIssues, activeTab, isClient]);
 
-  // If client, render ClientDashboard instead
-  if (isClient) {
-    return <ClientDashboard />;
-  }
+  // Client view handling is now integrated below instead of a separate component
 
-  // Show loading spinner while checking auth
-  if (isLoading) {
+  // Show loading spinner while checking auth or access
+  if (isLoading || allowed === null) {
     return (
       <div className="min-h-screen bg-bg-primary flex items-center justify-center">
         <Spinner />
+      </div>
+    );
+  }
+
+  if (!allowed) {
+    return (
+      <div className="min-h-screen bg-bg-primary flex flex-col">
+        <Header />
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-gray-500 text-lg">You don't have access to this project.</p>
+        </div>
       </div>
     );
   }
@@ -110,17 +130,15 @@ export default function IssuesPage() {
     "bg-bg-primary border border-border rounded-md px-3 py-1.5 text-sm text-text-primary focus:outline-none focus:border-border-focus transition appearance-none cursor-pointer";
 
   const viewToggleCls = (active: boolean) =>
-    `px-3 py-1.5 text-sm font-medium rounded-md transition cursor-pointer ${
-      active
-        ? "bg-accent text-white"
-        : "bg-bg-tertiary text-text-secondary hover:text-text-primary"
+    `px-3 py-1.5 text-sm font-medium rounded-md transition cursor-pointer ${active
+      ? "bg-accent text-white"
+      : "bg-bg-tertiary text-text-secondary hover:text-text-primary"
     }`;
 
   const tabCls = (active: boolean) =>
-    `px-4 py-2 text-sm font-medium border-b-2 transition cursor-pointer ${
-      active
-        ? "border-accent text-text-primary"
-        : "border-transparent text-text-secondary hover:text-text-primary"
+    `px-4 py-2 text-sm font-medium border-b-2 transition cursor-pointer ${active
+      ? "border-accent text-text-primary"
+      : "border-transparent text-text-secondary hover:text-text-primary"
     }`;
 
   return (
@@ -146,11 +164,27 @@ export default function IssuesPage() {
                 </span>
               )}
             </button>
+            <button
+              onClick={() => setActiveTab("maintainers")}
+              className={tabCls(activeTab === "maintainers")}
+            >
+              Maintainers
+            </button>
+            <button
+              onClick={() => setActiveTab("contributors")}
+              className={tabCls(activeTab === "contributors")}
+            >
+              Contributors
+            </button>
           </div>
         )}
 
         {activeTab === "pending" ? (
           <PendingApprovalPanel onCountChange={setPendingCount} />
+        ) : activeTab === "maintainers" ? (
+          <ManageMaintainersPanel projectId={projectId} />
+        ) : activeTab === "contributors" ? (
+          <ContributorsPanel projectId={projectId} />
         ) : (
           <>
             <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
@@ -222,7 +256,7 @@ export default function IssuesPage() {
                     onClick={() => setNewModalOpen(true)}
                     className="bg-accent hover:bg-accent-hover text-white font-medium text-sm rounded-md px-4 py-2 transition cursor-pointer"
                   >
-                    New Issue
+                    {isClient ? "Raise a Ticket" : "New Issue"}
                   </button>
                 )}
               </div>
@@ -233,8 +267,8 @@ export default function IssuesPage() {
             ) : viewMode === "board" ? (
               <KanbanBoard
                 issues={issueList}
-                canEdit={isLoggedIn}
-                canDelete={isLoggedIn && user?.role === "maintainer"}
+                canEdit={isLoggedIn && !isClient}
+                canDelete={isLoggedIn && isMaintainer}
                 onEdit={setEditIssue}
                 onDelete={handleDelete}
                 onRefetch={fetchIssues}
@@ -259,8 +293,8 @@ export default function IssuesPage() {
                   <IssueCard
                     key={issue.id}
                     issue={issue}
-                    canEdit={isLoggedIn}
-                    canDelete={isLoggedIn && user?.role === "maintainer"}
+                    canEdit={isLoggedIn && !isClient}
+                    canDelete={isLoggedIn && isMaintainer}
                     onEdit={setEditIssue}
                     onDelete={handleDelete}
                     isLoggedIn={isLoggedIn}
@@ -276,6 +310,7 @@ export default function IssuesPage() {
 
       <NewIssueModal
         open={newModalOpen}
+        projectId={projectId}
         onClose={() => setNewModalOpen(false)}
         onCreated={fetchIssues}
       />
