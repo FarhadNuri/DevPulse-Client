@@ -5,11 +5,14 @@ import { useAuth } from "../hooks";
 import toast from "react-hot-toast";
 import type { Role } from "../types";
 
+const SECRET_MAINTAINER_CODE = import.meta.env.VITE_MAINTAINER_SECRET || "";
+
 export default function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<Role>("contributor");
+  const [secretCode, setSecretCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const { login, isLoggedIn, isLoading } = useAuth();
@@ -23,6 +26,12 @@ export default function SignupPage() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+
+    if (role === "maintainer" && secretCode !== SECRET_MAINTAINER_CODE) {
+      setError("Invalid secret code for maintainer role.");
+      return;
+    }
+
     setError("");
     setLoading(true);
     try {
@@ -90,7 +99,10 @@ export default function SignupPage() {
             <label className="block text-sm md:text-base text-text-secondary mb-2">Role</label>
             <select
               value={role}
-              onChange={(e) => setRole(e.target.value as Role)}
+              onChange={(e) => {
+                setRole(e.target.value as Role);
+                if (e.target.value !== "maintainer") setSecretCode("");
+              }}
               className="cursor-pointer w-full bg-bg-primary border border-border rounded-md px-4 py-3 md:px-4 md:py-3.5 text-base md:text-lg text-text-primary focus:outline-none focus:border-border-focus transition cursor-pointer"
             >
               <option value="contributor">Contributor</option>
@@ -98,6 +110,19 @@ export default function SignupPage() {
               <option value="client">Client</option>
             </select>
           </div>
+          {role === "maintainer" && (
+            <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+              <label className="block text-sm md:text-base text-text-secondary mb-2">Secret Code</label>
+              <input
+                type="password"
+                value={secretCode}
+                onChange={(e) => setSecretCode(e.target.value)}
+                required
+                className="w-full bg-bg-primary border-border border rounded-md px-4 py-3 md:px-4 md:py-3.5 text-base md:text-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-border-focus transition focus:ring-2 focus:ring-accent/20"
+                placeholder="Enter secret code"
+              />
+            </div>
+          )}
           <button
             type="submit"
             disabled={loading}
