@@ -1,5 +1,5 @@
 import { useAuth } from "../hooks";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 export default function Header() {
   const { user, isLoggedIn, logout } = useAuth();
@@ -14,9 +14,9 @@ export default function Header() {
     <header className="bg-bg-secondary border-b border-border sticky top-0 z-30">
       <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-text-primary">
+          <Link to="/" className="text-2xl font-bold text-text-primary hover:opacity-80 transition-opacity">
             <span className="text-accent">Dev</span>Pulse
-          </h1>
+          </Link>
         </div>
         {isLoggedIn && user ? (
           <div className="flex items-center gap-3">
