@@ -1,68 +1,88 @@
-import { useState, useEffect, useCallback } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { issues as issuesApi } from "../api";
-import { useAuth } from "../hooks";
-import type { Issue, IssueType, IssueStatus } from "../types";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useParams, useSearchParams, Link } from "react-router-dom";
+import { issues as issuesApi, projects as projectsApi, getProjectActivity } from "../api";
+import { useAuth, useOrg, useConfirm } from "../hooks";
+import type { Issue, Project } from "../types";
 import toast from "react-hot-toast";
-import Header from "../components/Header";
 import IssueCard from "../components/IssueCard";
 import Spinner from "../components/Spinner";
 import NewIssueModal from "../components/NewIssueModal";
 import EditIssueModal from "../components/EditIssueModal";
-import IssueDetailsModal from "../components/IssueDetailsModal";
 import KanbanBoard from "../components/KanbanBoard";
 import PendingApprovalPanel from "../components/PendingApprovalPanel";
-import { normalizeStatus } from "../utils";
-import ManageMaintainersPanel from "../components/ManageMaintainersPanel";
-import { projects as projectsApi } from "../api";
+import AccessRequestsPanel from "../components/AccessRequestsPanel";
+import ProjectMembersPanel from "../components/ProjectMembersPanel";
+import IssueFilters from "../components/IssueFilters";
+import IssueDrawer from "../components/IssueDrawer";
+import ActivityTimeline from "../components/ActivityTimeline";
 
-import ContributorsPanel from "../components/ContributorsPanel";
-
-type ViewMode = "list" | "board";
-type TabMode = "all" | "pending" | "maintainers" | "contributors";
+type ViewMode = "board" | "list";
+type TabMode = "all" | "pending" | "access_requests" | "members" | "activity";
 
 export default function IssuesPage() {
   const { isLoggedIn, user, isLoading } = useAuth();
-  const navigate = useNavigate();
+  const { isMaintainer, isGuest } = useOrg();
+  const confirm = useConfirm();
+
+  const { orgId, projectId: paramProjectId } = useParams<{
+    orgId: string;
+    projectId: string;
+  }>();
+  const numOrgId = Number(orgId);
+  const numProjectId = Number(paramProjectId);
+
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // URL query params as primitive values to prevent unnecessary re-fetches
+  const search = searchParams.get("search") || undefined;
+  const status = searchParams.get("status") || undefined;
+  const type = searchParams.get("type") || undefined;
+  const assignee = searchParams.get("assignee") || undefined;
+  const labelsStr = searchParams.getAll("label").sort().join(",");
+  const page = Number(searchParams.get("page")) || 1;
+  const limit = 30;
+
+  const labels = useMemo(() => {
+    return labelsStr ? labelsStr.split(",") : [];
+  }, [labelsStr]);
+
+  const [project, setProject] = useState<Project | null>(null);
   const [issueList, setIssueList] = useState<Issue[]>([]);
+  const [totalIssues, setTotalIssues] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [filterType, setFilterType] = useState<"all" | IssueType>("all");
-  const [filterStatus, setFilterStatus] = useState<"all" | IssueStatus>("all");
+
   const [newModalOpen, setNewModalOpen] = useState(false);
   const [editIssue, setEditIssue] = useState<Issue | null>(null);
-  const [detailsIssue, setDetailsIssue] = useState<Issue | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("board");
   const [activeTab, setActiveTab] = useState<TabMode>("all");
   const [pendingCount, setPendingCount] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
-  const { id } = useParams();
-  const projectId = Number(id || 0);
   const [allowed, setAllowed] = useState<boolean | null>(null);
 
-  const isMaintainer = user?.role === "maintainer";
-  const isClient = user?.role === "client";
-
+  // Check access to project
   useEffect(() => {
-    projectsApi.get(String(projectId))
-      .then(() => setAllowed(true))
-      .catch(() => setAllowed(false));
-  }, [projectId]);
-
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!isLoading && !isLoggedIn) {
-      navigate("/login");
+    if (isNaN(numOrgId) || isNaN(numProjectId)) {
+      setAllowed(false);
+      return;
     }
-  }, [isLoggedIn, isLoading, navigate]);
 
-  // Detect mobile device and force list view
+    projectsApi
+      .get(numOrgId, numProjectId)
+      .then((p) => {
+        setProject(p);
+        setAllowed(true);
+      })
+      .catch(() => {
+        setAllowed(false);
+      });
+  }, [numOrgId, numProjectId]);
+
+  // Mobile check
   useEffect(() => {
     const checkMobile = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-      if (mobile) {
-        setViewMode("list");
-      }
+      if (mobile) setViewMode("list");
     };
 
     checkMobile();
@@ -71,28 +91,36 @@ export default function IssuesPage() {
   }, []);
 
   const fetchIssues = useCallback(async () => {
+    if (isNaN(numOrgId) || isNaN(numProjectId)) return;
     try {
-      const data = await issuesApi.list(projectId);
-      setIssueList(data);
+      setLoading(true);
+      const data = await issuesApi.list(numOrgId, numProjectId, {
+        search,
+        status,
+        type,
+        assignee,
+        label: labels.length > 0 ? labels : undefined,
+        page,
+        limit,
+      });
+      setIssueList(data.items || []);
+      setTotalIssues(data.total || 0);
     } catch {
       toast.error("Failed to load issues");
     } finally {
       setLoading(false);
     }
-  }, [projectId]);
+  }, [numOrgId, numProjectId, search, status, type, assignee, labelsStr, page]);
 
   useEffect(() => {
-    if (activeTab === "all" && !isClient) {
+    if (allowed && activeTab === "all") {
       fetchIssues();
     }
-  }, [fetchIssues, activeTab, isClient]);
+  }, [allowed, activeTab, fetchIssues]);
 
-  // Client view handling is now integrated below instead of a separate component
-
-  // Show loading spinner while checking auth or access
   if (isLoading || allowed === null) {
     return (
-      <div className="min-h-screen bg-bg-primary flex items-center justify-center">
+      <div className="py-20 flex justify-center">
         <Spinner />
       </div>
     );
@@ -100,19 +128,33 @@ export default function IssuesPage() {
 
   if (!allowed) {
     return (
-      <div className="min-h-screen bg-bg-primary flex flex-col">
-        <Header />
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-gray-500 text-lg">You don't have access to this project.</p>
+      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+        <div className="max-w-md bg-bg-secondary border border-border rounded-xl p-8 shadow-sm">
+          <h2 className="text-xl font-bold text-text-primary mb-2">Access Denied</h2>
+          <p className="text-text-muted text-sm mb-6">
+            You do not have approved access to view this project's board.
+          </p>
+          <Link
+            to={`/orgs/${numOrgId}/projects`}
+            className="inline-block bg-accent hover:bg-accent-hover text-white px-4 py-2 rounded-md text-sm font-medium transition"
+          >
+            Back to Projects
+          </Link>
         </div>
       </div>
     );
   }
 
   async function handleDelete(id: number) {
-    if (!confirm("Delete this issue?")) return;
+    const ok = await confirm({
+      title: "Delete Issue",
+      message: "Are you sure you want to delete this issue? This action cannot be undone.",
+      confirmText: "Delete",
+      variant: "danger",
+    });
+    if (!ok) return;
     try {
-      await issuesApi.remove(id);
+      await issuesApi.remove(numOrgId, id);
       toast.success("Issue deleted");
       await fetchIssues();
     } catch (err: unknown) {
@@ -120,212 +162,300 @@ export default function IssuesPage() {
     }
   }
 
-  const filtered = issueList.filter((i) => {
-    if (filterType !== "all" && i.type !== filterType) return false;
-    if (filterStatus !== "all" && normalizeStatus(i.status) !== filterStatus) return false;
-    return true;
-  });
+  function handleOpenDetails(issue: Issue) {
+    const next = new URLSearchParams(searchParams);
+    next.set("issue", String(issue.id));
+    setSearchParams(next);
+  }
 
-  const selectCls =
-    "bg-bg-primary border border-border rounded-md px-3 py-1.5 text-sm text-text-primary focus:outline-none focus:border-border-focus transition appearance-none cursor-pointer";
+  function handlePageChange(newPage: number) {
+    const next = new URLSearchParams(searchParams);
+    next.set("page", String(newPage));
+    setSearchParams(next);
+  }
+
+  const totalPages = Math.ceil(totalIssues / limit) || 1;
 
   const viewToggleCls = (active: boolean) =>
-    `px-3 py-1.5 text-sm font-medium rounded-md transition cursor-pointer ${active
-      ? "bg-accent text-white"
-      : "bg-bg-tertiary text-text-secondary hover:text-text-primary"
+    `px-3 py-1.5 text-xs font-medium rounded-md transition cursor-pointer ${
+      active
+        ? "bg-accent text-white shadow-xs"
+        : "bg-bg-tertiary text-text-secondary hover:text-text-primary"
     }`;
 
   const tabCls = (active: boolean) =>
-    `px-4 py-2 text-sm font-medium border-b-2 transition cursor-pointer ${active
-      ? "border-accent text-text-primary"
-      : "border-transparent text-text-secondary hover:text-text-primary"
+    `px-4 py-2 text-sm font-medium border-b-2 transition cursor-pointer ${
+      active
+        ? "border-accent text-text-primary font-semibold"
+        : "border-transparent text-text-muted hover:text-text-secondary"
     }`;
 
   return (
-    <div className="min-h-screen bg-bg-primary">
-      <Header />
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        {isMaintainer && (
-          <div className="flex items-center gap-1 mb-4 border-b border-border">
-            <button
-              onClick={() => setActiveTab("all")}
-              className={tabCls(activeTab === "all")}
-            >
-              All Issues
-            </button>
-            <button
-              onClick={() => setActiveTab("pending")}
-              className={tabCls(activeTab === "pending")}
-            >
-              Pending Approval
-              {pendingCount > 0 && (
-                <span className="ml-1.5 bg-amber-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[1.25rem] inline-block text-center">
-                  {pendingCount}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab("maintainers")}
-              className={tabCls(activeTab === "maintainers")}
-            >
-              Maintainers
-            </button>
-            <button
-              onClick={() => setActiveTab("contributors")}
-              className={tabCls(activeTab === "contributors")}
-            >
-              Contributors
-            </button>
+    <div className="p-6 max-w-7xl w-full mx-auto">
+      {/* Breadcrumb & Project Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <div className="flex items-center gap-2 text-xs text-text-muted mb-1">
+            <Link to={`/orgs/${numOrgId}/projects`} className="hover:text-accent transition">
+              Projects
+            </Link>
+            <span>/</span>
+            <span className="text-text-secondary truncate">{project?.name}</span>
           </div>
-        )}
+          <h1 className="text-2xl font-bold text-text-primary">{project?.name}</h1>
+          {project?.description && (
+            <p className="text-xs text-text-muted mt-0.5">{project.description}</p>
+          )}
+        </div>
 
-        {activeTab === "pending" ? (
-          <PendingApprovalPanel onCountChange={setPendingCount} />
-        ) : activeTab === "maintainers" ? (
-          <ManageMaintainersPanel projectId={projectId} />
-        ) : activeTab === "contributors" ? (
-          <ContributorsPanel projectId={projectId} />
-        ) : (
-          <>
-            <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-              <div className="flex items-center gap-2">
-                {!isMobile && (
-                  <>
-                    <button
-                      onClick={() => setViewMode("board")}
-                      className={viewToggleCls(viewMode === "board")}
-                    >
-                      Board View
-                    </button>
-                    <button
-                      onClick={() => setViewMode("list")}
-                      className={viewToggleCls(viewMode === "list")}
-                    >
-                      List View
-                    </button>
-                  </>
+        {isLoggedIn && (
+          <button
+            onClick={() => setNewModalOpen(true)}
+            className="bg-accent hover:bg-accent-hover text-white font-medium text-sm rounded-md px-4 py-2 transition cursor-pointer self-start sm:self-auto shadow-sm"
+          >
+            {isGuest ? "+ Submit Ticket" : "+ New Issue"}
+          </button>
+        )}
+      </div>
+
+      {/* Maintainer & Contributor Navigation Tabs */}
+      {!isGuest && (
+        <div className="flex items-center gap-1 mb-6 border-b border-border overflow-x-auto">
+          <button
+            onClick={() => setActiveTab("all")}
+            className={tabCls(activeTab === "all")}
+          >
+            Board
+          </button>
+          {isMaintainer && (
+            <>
+              <button
+                onClick={() => setActiveTab("pending")}
+                className={tabCls(activeTab === "pending")}
+              >
+                Pending Approval
+                {pendingCount > 0 && (
+                  <span className="ml-1.5 bg-amber-500 text-white text-[11px] font-bold rounded-full px-1.5 py-0.5">
+                    {pendingCount}
+                  </span>
                 )}
-              </div>
-              <div className="flex items-center gap-2">
-                {viewMode === "list" && (
-                  <select
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value as "all" | IssueStatus)}
-                    className={selectCls}
-                  >
-                    <option value="all">All statuses</option>
-                    <option value="open">Open</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="resolved">Resolved</option>
-                  </select>
-                )}
-                {viewMode === "board" ? (
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => setFilterType("all")}
-                      className={filterType === "all" ? viewToggleCls(true) : viewToggleCls(false)}
-                    >
-                      All
-                    </button>
-                    <button
-                      onClick={() => setFilterType("bug")}
-                      className={filterType === "bug" ? viewToggleCls(true) : viewToggleCls(false)}
-                    >
-                      Bugs
-                    </button>
-                    <button
-                      onClick={() => setFilterType("feature_request")}
-                      className={filterType === "feature_request" ? viewToggleCls(true) : viewToggleCls(false)}
-                    >
-                      Feature Requests
-                    </button>
-                  </div>
-                ) : (
-                  <select
-                    value={filterType}
-                    onChange={(e) => setFilterType(e.target.value as "all" | IssueType)}
-                    className={selectCls}
-                  >
-                    <option value="all">All types</option>
-                    <option value="bug">Bug</option>
-                    <option value="feature_request">Feature Request</option>
-                  </select>
-                )}
-                {isLoggedIn && (
+              </button>
+              <button
+                onClick={() => setActiveTab("access_requests")}
+                className={tabCls(activeTab === "access_requests")}
+              >
+                Access Requests
+              </button>
+              <button
+                onClick={() => setActiveTab("members")}
+                className={tabCls(activeTab === "members")}
+              >
+                Members
+              </button>
+            </>
+          )}
+          <button
+            onClick={() => setActiveTab("activity")}
+            className={tabCls(activeTab === "activity")}
+          >
+            Activity
+          </button>
+        </div>
+      )}
+
+      {/* Tab Panels */}
+      {activeTab === "pending" ? (
+        <PendingApprovalPanel orgId={numOrgId} onCountChange={setPendingCount} />
+      ) : activeTab === "access_requests" ? (
+        <AccessRequestsPanel orgId={numOrgId} projectId={numProjectId} />
+      ) : activeTab === "members" ? (
+        <ProjectMembersPanel
+          orgId={numOrgId}
+          projectId={numProjectId}
+          projectName={project?.name}
+        />
+      ) : activeTab === "activity" ? (
+        <div className="bg-bg-secondary border border-border rounded-xl p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-6 pb-4 border-b border-border">
+            <div>
+              <h2 className="text-base font-semibold text-text-primary">Project Activity</h2>
+              <p className="text-xs text-text-muted mt-0.5">Timeline of all actions and changes in this project</p>
+            </div>
+          </div>
+          <ActivityTimeline
+            key={`activity-${numOrgId}-${numProjectId}`}
+            fetchActivity={(before) => getProjectActivity(numOrgId, numProjectId, { before, limit: 10 })}
+            emptyMessage="No activity recorded on this project yet."
+          />
+        </div>
+      ) : (
+        <>
+          {/* Issue Filters (debounced search, status, type, assignee, labels) */}
+          <IssueFilters
+            orgId={numOrgId}
+            projectId={numProjectId}
+            currentUserId={user?.id}
+          />
+
+          {/* Controls Bar */}
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <div className="flex items-center gap-2">
+              {!isMobile && (
+                <>
                   <button
-                    onClick={() => setNewModalOpen(true)}
-                    className="bg-accent hover:bg-accent-hover text-white font-medium text-sm rounded-md px-4 py-2 transition cursor-pointer"
+                    onClick={() => setViewMode("board")}
+                    className={viewToggleCls(viewMode === "board")}
                   >
-                    {isClient ? "Raise a Ticket" : "New Issue"}
+                    Board View
                   </button>
-                )}
-              </div>
+                  <button
+                    onClick={() => setViewMode("list")}
+                    className={viewToggleCls(viewMode === "list")}
+                  >
+                    List View
+                  </button>
+                </>
+              )}
             </div>
 
-            {loading ? (
+            <div className="text-xs text-text-muted">
+              {totalIssues > 0 ? (
+                <span>
+                  Showing {issueList.length} of {totalIssues} issues
+                </span>
+              ) : null}
+            </div>
+          </div>
+
+          {/* Board or List */}
+          {loading ? (
+            <div className="py-20 flex justify-center">
               <Spinner />
-            ) : viewMode === "board" ? (
+            </div>
+          ) : viewMode === "board" ? (
+            <div className="space-y-4">
               <KanbanBoard
+                orgId={numOrgId}
                 issues={issueList}
-                canEdit={isLoggedIn && !isClient}
+                canEdit={isLoggedIn && !isGuest}
                 canDelete={isLoggedIn && isMaintainer}
                 onEdit={setEditIssue}
                 onDelete={handleDelete}
                 onRefetch={fetchIssues}
-                typeFilter={filterType}
-                onViewDetails={setDetailsIssue}
+                typeFilter="all"
+                onViewDetails={handleOpenDetails}
               />
-            ) : filtered.length === 0 ? (
-              <div className="text-center py-16">
-                <p className="text-text-muted text-sm">No issues found.</p>
-                {isLoggedIn && (
-                  <button
-                    onClick={() => setNewModalOpen(true)}
-                    className="text-accent hover:text-accent-hover text-sm mt-2 transition"
-                  >
-                    Create one!
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {filtered.map((issue) => (
-                  <IssueCard
-                    key={issue.id}
-                    issue={issue}
-                    canEdit={isLoggedIn && !isClient}
-                    canDelete={isLoggedIn && isMaintainer}
-                    onEdit={setEditIssue}
-                    onDelete={handleDelete}
-                    isLoggedIn={isLoggedIn}
-                    currentUser={user}
-                    onViewDetails={setDetailsIssue}
-                  />
-                ))}
-              </div>
-            )}
-          </>
-        )}
-      </main>
 
+              {/* Pagination controls for board */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between pt-4 border-t border-border text-xs">
+                  <span className="text-text-muted">
+                    Page {page} of {totalPages}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      disabled={page <= 1}
+                      onClick={() => handlePageChange(page - 1)}
+                      className="px-3 py-1.5 rounded bg-bg-secondary hover:bg-bg-tertiary disabled:opacity-40 disabled:cursor-not-allowed border border-border text-text-primary transition"
+                    >
+                      ← Previous
+                    </button>
+                    <button
+                      disabled={page >= totalPages}
+                      onClick={() => handlePageChange(page + 1)}
+                      className="px-3 py-1.5 rounded bg-bg-secondary hover:bg-bg-tertiary disabled:opacity-40 disabled:cursor-not-allowed border border-border text-text-primary transition"
+                    >
+                      Next →
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : issueList.length === 0 ? (
+            <div className="text-center py-16 bg-bg-secondary border border-border rounded-xl">
+              <p className="text-text-muted text-sm">No issues found matching the criteria.</p>
+              {isLoggedIn && (
+                <button
+                  onClick={() => setNewModalOpen(true)}
+                  className="text-accent hover:text-accent-hover text-sm mt-2 transition cursor-pointer font-medium"
+                >
+                  Create one!
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {issueList.map((issue) => (
+                <IssueCard
+                  key={issue.id}
+                  orgId={numOrgId}
+                  issue={issue}
+                  canEdit={isLoggedIn && (!isGuest || issue.approval_status === "pending")}
+                  canDelete={isLoggedIn && (isMaintainer || issue.reporter?.id === user?.id)}
+                  onEdit={setEditIssue}
+                  onDelete={handleDelete}
+                  isLoggedIn={isLoggedIn}
+                  currentUser={user}
+                  onViewDetails={handleOpenDetails}
+                />
+              ))}
+
+              {/* Pagination controls for list view */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between pt-4 border-t border-border text-xs">
+                  <span className="text-text-muted">
+                    Showing {(page - 1) * limit + 1} to{" "}
+                    {Math.min(page * limit, totalIssues)} of {totalIssues}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      disabled={page <= 1}
+                      onClick={() => handlePageChange(page - 1)}
+                      className="px-3 py-1.5 rounded bg-bg-secondary hover:bg-bg-tertiary disabled:opacity-40 disabled:cursor-not-allowed border border-border text-text-primary transition"
+                    >
+                      ← Previous
+                    </button>
+                    <span className="text-text-muted px-1">
+                      {page} / {totalPages}
+                    </span>
+                    <button
+                      disabled={page >= totalPages}
+                      onClick={() => handlePageChange(page + 1)}
+                      className="px-3 py-1.5 rounded bg-bg-secondary hover:bg-bg-tertiary disabled:opacity-40 disabled:cursor-not-allowed border border-border text-text-primary transition"
+                    >
+                      Next →
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Slide-over Issue Drawer (?issue=ID) */}
+      <IssueDrawer
+        orgId={numOrgId}
+        projectId={numProjectId}
+        onIssueUpdated={fetchIssues}
+      />
+
+      {/* New Issue Modal */}
       <NewIssueModal
         open={newModalOpen}
-        projectId={projectId}
+        orgId={numOrgId}
+        projectId={numProjectId}
         onClose={() => setNewModalOpen(false)}
         onCreated={fetchIssues}
       />
+
+      {/* Edit Issue Modal (legacy quick modal) */}
       <EditIssueModal
         open={!!editIssue}
+        orgId={numOrgId}
         onClose={() => setEditIssue(null)}
         issue={editIssue}
         onUpdated={fetchIssues}
-      />
-      <IssueDetailsModal
-        open={!!detailsIssue}
-        onClose={() => setDetailsIssue(null)}
-        issue={detailsIssue}
-        isLoggedIn={isLoggedIn}
-        currentUser={user}
       />
     </div>
   );

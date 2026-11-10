@@ -1,33 +1,30 @@
 import type { Issue } from "../types";
 import type { ReactNode } from "react";
 import { formatDate, STATUS_LABELS, TYPE_LABELS } from "../utils";
-import CommentSection from "./CommentSection";
 
 function Badge({ children, color }: { children: ReactNode; color: string }) {
   return (
-    <span
-      className={`text-xs font-medium rounded-md px-2 py-0.5 ${color}`}
-    >
+    <span className={`text-[11px] font-semibold rounded-md px-2 py-0.5 ${color}`}>
       {children}
     </span>
   );
 }
 
 const typeColors: Record<string, string> = {
-  bug: "bg-bug/15 text-bug",
-  feature_request: "bg-feature/15 text-feature",
+  bug: "bg-red-500/15 text-red-400 border border-red-500/30",
+  feature_request: "bg-purple-500/15 text-purple-400 border border-purple-500/30",
 };
 
 const statusColors: Record<string, string> = {
-  open: "bg-open/15 text-open",
-  in_progress: "bg-in-progress/15 text-in-progress",
-  resolved: "bg-resolved/15 text-resolved",
+  open: "bg-blue-500/15 text-blue-400 border border-blue-500/30",
+  in_progress: "bg-amber-500/15 text-amber-400 border border-amber-500/30",
+  resolved: "bg-green-500/15 text-green-400 border border-green-500/30",
 };
 
 const approvalColors: Record<string, string> = {
-  pending: "bg-amber-500/15 text-amber-500",
-  approved: "bg-green-500/15 text-green-500",
-  rejected: "bg-red-500/15 text-red-500",
+  pending: "bg-amber-500/15 text-amber-500 border border-amber-500/30",
+  approved: "bg-green-500/15 text-green-500 border border-green-500/30",
+  rejected: "bg-red-500/15 text-red-500 border border-red-500/30",
 };
 
 const approvalLabels: Record<string, string> = {
@@ -36,72 +33,137 @@ const approvalLabels: Record<string, string> = {
   rejected: "Rejected",
 };
 
+function getInitials(name: string) {
+  if (!name) return "?";
+  return name
+    .split(" ")
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
 interface IssueCardProps {
+  orgId: number;
   issue: Issue;
-  canEdit: boolean;
-  canDelete: boolean;
-  onEdit: (issue: Issue) => void;
-  onDelete: (id: number) => void;
-  isLoggedIn: boolean;
-  currentUser: { id: number; name: string; role: string } | null;
+  canEdit?: boolean;
+  canDelete?: boolean;
+  onEdit?: (issue: Issue) => void;
+  onDelete?: (id: number) => void;
+  isLoggedIn?: boolean;
+  currentUser?: { id: number; name: string } | null;
   onViewDetails: (issue: Issue) => void;
 }
 
-export default function IssueCard({ issue, canEdit, canDelete, onEdit, onDelete, isLoggedIn, currentUser, onViewDetails }: IssueCardProps) {
+export default function IssueCard({
+  issue,
+  canEdit,
+  canDelete,
+  onEdit,
+  onDelete,
+  onViewDetails,
+}: IssueCardProps) {
   return (
-    <div 
-      className="bg-bg-secondary border border-border rounded-lg p-4 hover:border-border-focus/30 transition cursor-pointer"
+    <div
       onClick={() => onViewDetails(issue)}
+      className="bg-bg-secondary border border-border rounded-lg p-3.5 hover:border-border-focus/60 transition cursor-pointer space-y-2.5 group hover:shadow-md"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <h3 className="text-base font-semibold text-text-primary truncate">{issue.title}</h3>
-          <p className="text-sm text-text-muted mt-1 line-clamp-2">{issue.description}</p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {canEdit && (
+      {/* Top row: Title and action buttons */}
+      <div className="flex items-start justify-between gap-2.5">
+        <h3 className="text-sm font-semibold text-text-primary group-hover:text-accent transition leading-snug line-clamp-2">
+          {issue.title}
+        </h3>
+        <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+          {canEdit && onEdit && (
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit(issue);
-              }}
-              className="cursor-pointer text-sm font-medium text-accent hover:text-accent-hover bg-accent/10 hover:bg-accent/20 transition px-3 py-1.5 rounded-md border border-accent/30 cursor-pointer"
+              onClick={() => onEdit(issue)}
+              className="text-xs font-medium text-text-muted hover:text-accent p-1 transition cursor-pointer"
+              title="Quick Edit"
             >
-              Edit
+              ✏️
             </button>
           )}
-          {canDelete && (
+          {canDelete && onDelete && (
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(issue.id);
-              }}
-              className="cursor-pointer text-sm font-medium text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 transition px-3 py-1.5 rounded-md border border-red-500/30 cursor-pointer"
+              onClick={() => onDelete(issue.id)}
+              className="text-xs font-medium text-text-muted hover:text-red-400 p-1 transition cursor-pointer"
+              title="Delete Issue"
             >
-              Delete
+              🗑️
             </button>
           )}
         </div>
-      </div>
-      <div className="flex items-center gap-2 mt-3 flex-wrap">
-        <Badge color={typeColors[issue.type]}>{TYPE_LABELS[issue.type] ?? issue.type}</Badge>
-        <Badge color={statusColors[issue.status]}>{STATUS_LABELS[issue.status] ?? issue.status}</Badge>
-        {issue.approval_status && (
-          <Badge color={approvalColors[issue.approval_status]}>
-            {approvalLabels[issue.approval_status] ?? issue.approval_status}
-          </Badge>
-        )}
-        <span className="text-sm text-text-muted ml-auto">
-          {issue.reporter?.name ?? "Unknown"} · {formatDate(issue.created_at)}
-        </span>
       </div>
 
-      <div onClick={(e) => e.stopPropagation()}>
-        <CommentSection
-          issueId={issue.id}
-          isLoggedIn={isLoggedIn}
-          currentUser={currentUser}
-        />
+      {/* Description preview */}
+      {issue.description && (
+        <p className="text-xs text-text-muted line-clamp-2 leading-relaxed">
+          {issue.description}
+        </p>
+      )}
+
+      {/* Label chips row */}
+      {issue.labels && issue.labels.length > 0 && (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {issue.labels.map((lbl) => (
+            <span
+              key={lbl.id}
+              style={{
+                backgroundColor: `${lbl.color}20`,
+                color: lbl.color,
+                borderColor: `${lbl.color}40`,
+              }}
+              className="text-[10px] font-semibold px-2 py-0.5 rounded-full border truncate max-w-[120px]"
+            >
+              {lbl.name}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Footer metadata: Badges, Assignee avatar/initials, Comments */}
+      <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/40 text-xs">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[11px] font-mono font-semibold text-text-muted bg-bg-tertiary px-1.5 py-0.5 rounded border border-border">
+            #{issue.id}
+          </span>
+          <Badge color={typeColors[issue.type]}>{TYPE_LABELS[issue.type] ?? issue.type}</Badge>
+          <Badge color={statusColors[issue.status]}>{STATUS_LABELS[issue.status] ?? issue.status}</Badge>
+          {issue.approval_status && (
+            <Badge color={approvalColors[issue.approval_status]}>
+              {approvalLabels[issue.approval_status] ?? issue.approval_status}
+            </Badge>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3 shrink-0 text-text-muted">
+          {/* Comment Count */}
+          {(Number(issue.comment_count) > 0 || issue.comment_count === 0) && (
+            <span className="flex items-center gap-1 text-[11px] hover:text-text-primary transition">
+              <span>💬</span>
+              <span>{issue.comment_count || 0}</span>
+            </span>
+          )}
+
+          <span>{formatDate(issue.created_at)}</span>
+
+          {/* Assignee Avatar / Initials */}
+          {issue.assignee ? (
+            <div
+              className="w-5 h-5 rounded-full bg-accent/20 text-accent font-bold text-[10px] flex items-center justify-center border border-accent/40"
+              title={`Assigned to ${issue.assignee.name}`}
+            >
+              {getInitials(issue.assignee.name)}
+            </div>
+          ) : (
+            <div
+              className="w-5 h-5 rounded-full border border-dashed border-border/60 text-text-muted text-[10px] flex items-center justify-center"
+              title="Unassigned"
+            >
+              👤
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
