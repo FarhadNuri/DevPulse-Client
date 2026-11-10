@@ -1,193 +1,219 @@
-# DevPulse - Issue Tracking & Collaboration Platform
+# DevPulse - Multi-Tenant Issue Tracking & Collaboration Platform
 
-A modern, full-stack issue tracking system built with React and TypeScript, featuring role-based access control, real-time comments, and intuitive kanban boards.
-
-## About
-
-DevPulse is a production-ready issue management platform designed for development teams and client collaboration. It streamlines bug tracking, feature requests, and client feedback with a clean, dark-themed interface. The application features secure authentication, comprehensive commenting system, and flexible views—all optimized for both desktop and mobile devices.
-
-## Live Application
-
-> Explore DevPulse in action:
->
-> **🌐 https://devpulsev2.vercel.app/**
->
-> Track issues, collaborate with teams, and deliver quality software
-
-## Backend Repo
-
-> Explore DevPulse backend:
->
-> **🌐 https://github.com/FarhadNuri/Dev-Pulse-L2A2**
->
->
-
-
-## Features
-
-### Core Functionality
-
-- **Multi-Role System** - Three distinct roles: Client, Contributor, and Maintainer
-- **Issue Management** - Create, edit, and track bugs and feature requests
-- **Approval Workflow** - Client submissions require maintainer approval
-- **Comments System** - Real-time discussion on any issue with role badges
-- **Multiple Views** - Switch between List View and Kanban Board
-- **Issue Details Modal** - Click any card for full details and comments
-- **Smart Filtering** - Filter by type, status, and search across issues
-
-### Technical Highlights
-
-- **Role-Based Access Control** - Fine-grained permissions per user role
-- **JWT Authentication** - Secure token-based authentication with localStorage
-- **Responsive Design** - Mobile-first UI with Tailwind CSS
-- **Drag-and-Drop** - Intuitive kanban board with @dnd-kit
-- **Type Safety** - Full TypeScript implementation
-- **Optimized Loading** - Prevents redirect on page reload
+A production-ready, full-stack issue tracking system built with **React 19**, **TypeScript**, and **Tailwind CSS**. Designed for engineering teams and client collaboration, DevPulse provides isolated multi-tenant organization workspaces, multi-project Kanban boards, client ticket triage workflows, real-time activity timelines, and an administrative control center.
 
 ---
 
-## Key Features by Role
+## Live Application & Repositories
 
-### Client
-- Submit issues with app name
-- Track submission approval status
-- View and comment on own submissions
-- Personal dashboard view
+| Resource | Link |
+| :--- | :--- |
+| **Frontend Application** | [https://devpulsev2.vercel.app](https://devpulsev2.vercel.app) |
+| **Backend API Service** | [https://dev-pulse-l2-a2.vercel.app](https://dev-pulse-l2-a2.vercel.app) |
+| **Backend Repository** | [GitHub - FarhadNuri/Dev-Pulse-L2A2](https://github.com/FarhadNuri/Dev-Pulse-L2A2) |
 
-**Contributor**
-- View all approved issues
-- Create and manage issues
-- Comment on any issue
-- Edit own issues
+---
 
-**Maintainer**
-- Full access to all issues
-- Approve/reject client submissions
-- Delete any issue or comment
-- Manage issue status and workflow
+## What's New in DevPulse
+
+- **Multi-Tenant Organizations:** Users can create, switch between, and manage multiple isolated organization workspaces with custom branding and dedicated team rosters.
+- **Multi-Project Workspaces:** Organize work into distinct projects with unique project keys, progress meters, and project-specific member lists.
+- **Modern Kanban Engine:** Fluid drag-and-drop column workflows powered by `@dnd-kit`, complete with filter bars, priority tagging, and instant state synchronization.
+
+- **File Attachments & Media Previews:** Upload screenshots and crash logs directly to tickets with drag-and-drop upload preview.
+- **Chronological Activity Timeline:** Automatic audit trails logging status transitions, reassignments, label updates, and submission reviews.
+- **Client Submission & Triage Workflow:** Client bug submissions enter an approval queue requiring maintainer review with structured accept/reject feedback dialogs.
+- **Super-Admin Console:** Dedicated administrative portal (`/admin`) for platform-wide metrics, global organization directory, and user account management.
+- **Modular API Architecture:** Replaced monolithic API calls with domain-driven service modules (`auth`, `orgs`, `projects`, `issues`, `comments`, `labels`, `attachments`, `activity`, `invitations`, `admin`) and centralized Axios interceptors.
 
 ---
 
 ## User Roles & Permissions
 
-| Feature | Client | Contributor | Maintainer |
-|---------|--------|-------------|------------|
-| View approved issues | ✅ Own only | ✅ All | ✅ All |
-| Create issues | ✅ Requires approval | ✅ Auto-approved | ✅ Auto-approved |
-| Edit issues | ❌ | ✅ Own only | ✅ All |
-| Delete issues | ✅ Own only | ❌ | ✅ All |
-| View comments | ✅ | ✅ | ✅ |
-| Add comments | ✅ | ✅ | ✅ |
-| Delete comments | ✅ Own only | ✅ Own only | ✅ All |
-| Approve submissions | ❌ | ❌ | ✅ |
-| Drag-and-drop status | ❌ | ✅ | ✅ |
+DevPulse supports a 5-tier role hierarchy spanning platform, workspace, and project levels:
 
-## Tech Stack
-
-### Frontend
-- **React 18** - Modern UI library
-- **TypeScript** - Type-safe development
-- **Vite** - Fast build tool and dev server
-- **Tailwind CSS** - Utility-first styling
-- **React Router** - Client-side routing
-- **React Hot Toast** - Toast notifications
-- **@dnd-kit** - Drag-and-drop functionality
-
-### Backend
-- **Node.js/Express** - RESTful API (deployed separately)
-- **JWT** - Authentication tokens
-- **RESTful Architecture** - Clean API design
-
-
-
-## Project Architecture
-
-```
-devpulse-client/
-├── src/
-│   ├── api.ts                    # API client & endpoints
-│   ├── types.ts                  # TypeScript interfaces
-│   ├── utils.ts                  # Helper functions
-│   ├── hooks.tsx                 # Auth context & hooks
-│   ├── components/               # Reusable components
-│   │   ├── Header.tsx            # Navigation header
-│   │   ├── Footer.tsx            # App footer
-│   │   ├── IssueCard.tsx         # Issue display card
-│   │   ├── KanbanBoard.tsx       # Drag-and-drop board
-│   │   ├── CommentSection.tsx    # Comments UI
-│   │   ├── IssueDetailsModal.tsx # Full issue view
-│   │   ├── NewIssueModal.tsx     # Create issue form
-│   │   ├── EditIssueModal.tsx    # Edit issue form
-│   │   ├── ClientDashboard.tsx   # Client-specific view
-│   │   ├── PendingApprovalPanel.tsx # Approval queue
-│   │   ├── Modal.tsx             # Base modal component
-│   │   └── Spinner.tsx           # Loading indicator
-│   └── pages/                    # Route pages
-│       ├── IssuesPage.tsx        # Main dashboard
-│       ├── LoginPage.tsx         # Authentication
-│       └── SignupPage.tsx        # Registration
-├── public/                        # Static assets
-└── dist/                          # Production build
-```
-
-## API Integration
-
-DevPulse connects to a RESTful backend API:
-
-**Base URL:** `https://dev-pulse-l2-a2.vercel.app`
-
-### Key Endpoints
-
-**Authentication**
-- `POST /api/auth/signup` - Create account
-- `POST /api/auth/login` - User login
-
-**Issues**
-- `GET /api/issues` - List all issues
-- `POST /api/issues` - Create issue
-- `PATCH /api/issues/:id` - Update issue
-- `DELETE /api/issues/:id` - Delete issue
-- `GET /api/issues/pending` - Pending approvals
-- `PATCH /api/issues/:id/approve` - Approve/reject
-
-**Comments**
-- `GET /api/issues/:id/comments` - List comments (public)
-- `POST /api/issues/:id/comments` - Add comment (auth)
-- `DELETE /api/comments/:id` - Delete comment (auth)
-
-## Authentication Flow
-
-### Initial Load
-```
-App Start → Check localStorage → 
-  Token Found? 
-    → Restore Session → Navigate to Dashboard
-    → No Token → Show Login Page
-```
-
-### Login Process
-```
-User Login → API Call → Receive JWT Token →
-  Save to localStorage → Update Auth Context → 
-  Redirect to Dashboard
-```
-
-### Auth Persistence
-- JWT token stored in `localStorage` as `devpulse_token`
-- User object stored as `devpulse_user`
-- Loading state prevents premature redirects on reload
-- Automatic session restoration on page refresh
-
-
-## Getting Started
-
-**Farhad Nuri**
-- Email: farhadnuri559@gmail.com
-- GitHub: [@FarhadNuri](https://github.com/FarhadNuri)
-- LinkedIn: [Farhad Nuri](https://www.linkedin.com/in/farhad-nuri-ba99a62a5/)
-
+| Capability | Super Admin | Org Admin | Maintainer | Contributor | Client |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Platform-wide Admin Console** (`/admin`) | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Manage Organization Settings & Billing** | ✅ | ✅ | ❌ | ❌ | ❌ |
+| **Invite & Manage Org Members / Roles** | ✅ | ✅ | ✅ | ❌ | ❌ |
+| **Create & Configure Projects** | ✅ | ✅ | ✅ | ❌ | ❌ |
+| **Review & Approve Client Submissions** | ✅ | ✅ | ✅ | ❌ | ❌ |
+| **Drag & Drop Status / Reassign Issues** | ✅ | ✅ | ✅ | ✅ | ❌ |
+| **Direct Issue Creation (Auto-Approved)** | ✅ | ✅ | ✅ | ✅ | ❌ |
+| **Client Issue Submission (Queue Required)**| ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Delete Any Issue / Comment** | ✅ | ✅ | ✅ | ❌ | ❌ |
+| **View Audit Activity Timeline** | ✅ | ✅ | ✅ | ✅ | Own Only |
 
 ---
 
-**⭐ Star this repo if you found it helpful!**
+## Tech Stack
 
+### Frontend Architecture
+- **Framework:** [React 19](https://react.dev/) with [Vite](https://vitejs.dev/)
+- **Language:** [TypeScript](https://www.typescriptlang.org/) (Strict typing across domain entities)
+- **Styling:** [Tailwind CSS v4](https://tailwindcss.com/) with custom dark-mode theme tokens
+- **Animations:** [Framer Motion](https://www.framer.com/motion/)
+- **Drag-and-Drop:** [@dnd-kit](https://dndkit.com/) (`@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`)
+- **Routing:** [React Router v7](https://reactrouter.com/) (Protected routes, layout wrappers, and dynamic params)
+- **HTTP Client:** [Axios](https://axios-http.com/) with request/response JWT interceptors
+- **Icons & Notifications:** [Lucide Icons](https://lucide.dev/) & [React Hot Toast](https://react-hot-toast.com/)
+
+### Backend Integration
+- **Platform:** Node.js / Express REST API
+- **Authentication:** Stateless JWT bearer tokens with persistent session restore
+- **Storage & Uploads:** Multi-tenant MongoDB database and cloud attachment storage
+
+---
+
+## Project Architecture
+
+```text
+DevPulse-Client/
+├── public/
+│   ├── favicon.svg               # Vector brand pulse icon
+│   └── screenshots/              # High-definition landing page preview assets
+├── src/
+│   ├── api/                      # Modular API service layer
+│   │   ├── client.ts             # Axios instance & token interceptors
+│   │   ├── auth.ts               # Login, registration, token refresh
+│   │   ├── orgs.ts               # Organization CRUD & membership
+│   │   ├── projects.ts           # Project lifecycle & members
+│   │   ├── issues.ts             # Issues CRUD, status transitions, triage
+│   │   ├── comments.ts           # Comment threads & reactions
+│   │   ├── labels.ts             # Workspace label configuration
+│   │   ├── attachments.ts        # File upload endpoints
+│   │   ├── activity.ts           # Audit log history
+│   │   ├── invitations.ts        # Email invitation tokens
+│   │   ├── admin.ts              # Super-admin platform endpoints
+│   │   └── index.ts              # Unified barrel export
+│   ├── context/                  # Global React context providers
+│   │   ├── AuthContext.tsx       # Session state, user payload, login/logout
+│   │   ├── OrgContext.tsx        # Active organization & workspace switcher
+│   │   └── ConfirmContext.tsx    # Accessible modal confirmation prompts
+│   ├── hooks/                    # Reusable custom hooks
+│   │   └── useDebounce.ts        # Input debounce for search & filters
+│   ├── components/               # Core UI components
+│   │   ├── AppLayout.tsx         # Workspace navigation shell & sidebar
+│   │   ├── OrgRoute.tsx          # Organization context route guard
+│   │   ├── KanbanBoard.tsx       # Drag-and-drop Kanban engine
+│   │   ├── IssueCard.tsx         # Ticket preview card
+│   │   ├── IssueDrawer.tsx       # Slide-over quick inspection panel
+│   │   ├── IssueFilters.tsx      # Multi-facet search and filter toolbar
+│   │   ├── IssueDetailsModal.tsx # Full-screen ticket detail & discussion
+│   │   ├── ActivityTimeline.tsx  # Chronological issue audit trail
+│   │   ├── CommentSection.tsx    # Threaded discussions with deletion
+│   │   ├── AssigneePicker.tsx    # Member assignment dropdown
+│   │   ├── LabelPicker.tsx       # Custom label selector
+│   │   ├── AttachmentUploader.tsx# Drag-and-drop file uploader
+│   │   ├── PendingApprovalPanel.tsx # Maintainer submission review queue
+│   │   ├── RejectReasonDialog.tsx# Structured rejection feedback modal
+│   │   ├── ProjectCard.tsx       # Project summary card with metrics
+│   │   ├── ProjectMembersPanel.tsx # Scoped project access controller
+│   │   ├── admin/                # Super-Admin console components
+│   │   │   ├── AdminLayout.tsx
+│   │   │   └── SuperAdminRoute.tsx
+│   │   ├── landing/              # Marketing showcase sections
+│   │   │   ├── Navbar.tsx, Hero.tsx, TaglineReveal.tsx, Proof.tsx
+│   │   │   ├── ProblemSolution.tsx, HowItWorks.tsx, Benefits.tsx
+│   │   │   └── FAQ.tsx, FinalCTA.tsx, Footer.tsx
+│   │   └── org/                  # Workspace configuration components
+│   │       ├── MembersTable.tsx, InviteMemberModal.tsx, ManageLabelsPanel.tsx
+│   ├── pages/                    # Routed view pages
+│   │   ├── LandingPage.tsx       # Public marketing page (/)
+│   │   ├── LoginPage.tsx         # Authentication login (/login)
+│   │   ├── SignupPage.tsx        # User registration (/signup)
+│   │   ├── OnboardingPage.tsx    # First-time organization setup (/onboarding)
+│   │   ├── InviteAcceptPage.tsx  # Invitation token acceptance (/invite/:token)
+│   │   ├── DashboardPage.tsx     # Workspace executive overview (/dashboard)
+│   │   ├── ProjectsGridPage.tsx  # Organization projects list (/orgs/:orgId/projects)
+│   │   ├── IssuesPage.tsx        # Project Kanban & issue tracking
+│   │   ├── OrgSettingsPage.tsx   # Workspace administration & labels
+│   │   ├── MyRequestsPage.tsx    # User submitted ticket history
+│   │   └── admin/                # Platform management views
+│   │       ├── AdminDashboardPage.tsx
+│   │       ├── AdminOrgsPage.tsx
+│   │       └── AdminUsersPage.tsx
+│   ├── types.ts                  # Domain models and TypeScript contracts
+│   ├── utils.ts                  # Date formatting, initials, and helper functions
+│   └── index.css                 # Theme tokens, fonts, and scrollbar styles
+├── index.html                    # SEO metadata and Google font preconnects
+├── package.json
+└── vite.config.ts
+```
+
+---
+
+## Getting Started
+
+### Prerequisites
+- **Node.js**: v18.0.0 or higher
+- **npm** or **pnpm** / **yarn**
+
+### 1. Clone the Repository
+```bash
+git clone https://github.com/FarhadNuri/DevPulse-Client.git
+cd DevPulse-Client
+```
+
+### 2. Configure Environment Variables
+Copy `.env.example` to `.env`:
+```bash
+cp .env.example .env
+```
+
+Set your configuration values:
+```env
+# URL pointing to the DevPulse backend API
+VITE_API_URL=http://localhost:5000
+
+# Maintainer signup authorization secret
+VITE_MAINTAINER_SECRET=your_secret_key_here
+```
+
+### 3. Install Dependencies
+```bash
+npm install
+```
+
+### 4. Run the Development Server
+```bash
+npm run dev
+```
+Open your browser at `http://localhost:5173`.
+
+### 5. Build for Production
+```bash
+npm run build
+npm run preview
+```
+
+---
+
+## Application Routes Overview
+
+| Route | Access | Description |
+| :--- | :--- | :--- |
+| `/` | Public | Marketing landing page with interactive showcase |
+| `/login` | Public | Sign in to an existing account |
+| `/signup` | Public | Register a new user or maintainer account |
+| `/invite/:token` | Public / Auth | Accept an invitation to join an organization |
+| `/dashboard` | Authenticated | Multi-tenant workspace metrics and activity |
+| `/orgs/:orgId/projects` | Authenticated | Project directory for the active organization |
+| `/orgs/:orgId/projects/:projectId` | Authenticated | Interactive Kanban board and issue management |
+| `/orgs/:orgId/settings` | Org Admin / Maintainer | Workspace settings, members, and custom labels |
+| `/orgs/:orgId/my-requests` | Authenticated | User submitted ticket tracking |
+| `/admin` | Super Admin | Global system metrics, organizations, and user directory |
+
+---
+
+## Author & Support
+
+**Farhad Nuri**
+- **GitHub:** [@FarhadNuri](https://github.com/FarhadNuri)
+- **LinkedIn:** [Farhad Nuri](https://www.linkedin.com/in/farhad-nuri-ba99a62a5/)
+- **Email:** farhadnuri559@gmail.com
+
+---
+
+⭐ **Star this repository if you find it helpful!**
