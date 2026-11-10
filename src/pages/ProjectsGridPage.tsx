@@ -1,137 +1,113 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { projects as projectsApi } from "../api";
-import { useAuth } from "../hooks";
+import { useOrg } from "../hooks";
 import ProjectCard from "../components/ProjectCard";
 import NewProjectModal from "../components/NewProjectModal";
-import { useNavigate } from "react-router-dom";
-import Header from "../components/Header";
+import Spinner from "../components/Spinner";
+import type { Project } from "../types";
+import toast from "react-hot-toast";
 
 export default function ProjectsGridPage() {
-  const { user } = useAuth();
+  const { orgId } = useParams<{ orgId: string }>();
+  const numOrgId = Number(orgId);
+  const { isMaintainer, currentOrg } = useOrg();
   const navigate = useNavigate();
-  const [list, setList] = useState<any[]>([]);
-  const [pendingList, setPendingList] = useState<any[]>([]);
-  const [showModal, setShowModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<"all" | "pending">("all");
 
-  async function loadProjects() {
+  const [list, setList] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [requestingId, setRequestingId] = useState<number | null>(null);
+
+  const loadProjects = useCallback(async () => {
+    if (isNaN(numOrgId) || numOrgId <= 0) return;
     try {
-      const data = await projectsApi.list();
-      setList(data);
-      if (user?.role === "maintainer") {
-        const pendingData = await projectsApi.pending();
-        setPendingList(pendingData);
-      }
-    } catch (e) {
-      console.error(e);
+      setLoading(true);
+      const data = await projectsApi.list(numOrgId);
+      setList(data || []);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to load projects");
+    } finally {
+      setLoading(false);
     }
-  }
+  }, [numOrgId]);
 
   useEffect(() => {
     loadProjects();
-  }, [user]);
+  }, [loadProjects]);
 
-  async function handleRequestAccess(id: number) {
+  async function handleRequestAccess(projectId: number) {
+    setRequestingId(projectId);
     try {
-      await projectsApi.requestAccess(String(id));
-      loadProjects();
-    } catch (e) {
-      console.error(e);
-    }
-  }
-
-  if (!user) return null;
-
-  const isMaintainer = user?.role === "maintainer";
-  const isClient = user?.role === "client";
-
-  async function handleApproveProject(id: number, action: "approved" | "rejected") {
-    try {
-      await projectsApi.approve(String(id), action);
-      loadProjects();
-    } catch (e) {
-      console.error(e);
+      await projectsApi.requestAccess(numOrgId, projectId);
+      toast.success("Access requested");
+      await loadProjects();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to request access");
+    } finally {
+      setRequestingId(null);
     }
   }
 
   return (
-    <div className="min-h-screen bg-bg-primary">
-      <Header />
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-semibold text-text-primary">Projects</h1>
-          {(isMaintainer || isClient) && (
-            <button className="bg-accent hover:bg-accent-hover text-white px-4 py-2 rounded-md font-medium text-sm transition-colors cursor-pointer" onClick={() => setShowModal(true)}>
-              New Project
+    <div className="p-6 max-w-7xl w-full mx-auto">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary">Projects</h1>
+          <p className="text-sm text-text-muted mt-1">
+            {currentOrg?.name ? `Organization: ${currentOrg.name}` : "Workspace Projects"}
+          </p>
+        </div>
+        {isMaintainer && (
+          <button
+            onClick={() => setShowModal(true)}
+            className="bg-accent hover:bg-accent-hover text-white px-4 py-2 rounded-md font-medium text-sm transition cursor-pointer self-start sm:self-auto"
+          >
+            + New Project
+          </button>
+        )}
+      </div>
+
+      {/* Projects Grid */}
+      {loading ? (
+        <div className="py-20 flex justify-center">
+          <Spinner />
+        </div>
+      ) : list.length === 0 ? (
+        <div className="text-center py-20 bg-bg-secondary border border-border rounded-xl">
+          <h3 className="text-lg font-medium text-text-primary mb-2">No projects yet</h3>
+          <p className="text-sm text-text-muted max-w-md mx-auto mb-6">
+            {isMaintainer
+              ? "Get started by creating your organization's first project."
+              : "No projects are currently available in this organization."}
+          </p>
+          {isMaintainer && (
+            <button
+              onClick={() => setShowModal(true)}
+              className="bg-accent hover:bg-accent-hover text-white px-4 py-2 rounded-md font-medium text-sm transition"
+            >
+              Create Project
             </button>
           )}
         </div>
-
-        {isMaintainer && (
-          <div className="flex items-center gap-4 border-b border-border mb-6 pb-2">
-            <button
-              onClick={() => setActiveTab("all")}
-              className={`text-sm font-medium transition ${activeTab === "all" ? "text-accent border-b-2 border-accent" : "text-text-muted hover:text-text-primary"}`}
-            >
-              All Projects
-            </button>
-            <button
-              onClick={() => setActiveTab("pending")}
-              className={`text-sm font-medium transition flex items-center gap-2 ${activeTab === "pending" ? "text-accent border-b-2 border-accent" : "text-text-muted hover:text-text-primary"}`}
-            >
-              Pending Approval
-              {pendingList.length > 0 && (
-                <span className="bg-amber-500/20 text-amber-500 text-[10px] px-1.5 py-0.5 rounded-full">
-                  {pendingList.length}
-                </span>
-              )}
-            </button>
-          </div>
-        )}
-
-        {activeTab === "all" ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {list.map((project) => (
-              <ProjectCard
-                key={project.id}
-                project={project}
-                isMaintainer={isMaintainer}
-                isClient={isClient}
-                onOpen={(id) => navigate(`/projects/${id}`)}
-                onRequestAccess={handleRequestAccess}
-              />
-            ))}
-            {list.length === 0 && (
-              <div className="col-span-full text-center py-16 text-text-muted">
-                No projects found.
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {pendingList.map((project) => (
-              <div key={project.id} className="bg-bg-secondary border border-border rounded-lg p-4 shadow-sm relative">
-                <h3 className="text-base font-semibold text-text-primary mb-4">{project.name}</h3>
-                <div className="flex gap-2">
-                  <button onClick={() => handleApproveProject(project.id, "approved")} className="text-xs font-medium text-green-500 bg-green-500/10 hover:bg-green-500/20 transition px-3 py-1.5 rounded-md border border-green-500/20 cursor-pointer">
-                    Approve
-                  </button>
-                  <button onClick={() => handleApproveProject(project.id, "rejected")} className="text-xs font-medium text-red-500 bg-red-500/10 hover:bg-red-500/20 transition px-3 py-1.5 rounded-md border border-red-500/20 cursor-pointer">
-                    Reject
-                  </button>
-                </div>
-              </div>
-            ))}
-            {pendingList.length === 0 && (
-              <div className="col-span-full text-center py-16 text-text-muted">
-                No pending project requests.
-              </div>
-            )}
-          </div>
-        )}
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {list.map((project) => (
+            <ProjectCard
+              key={project.id}
+              project={project}
+              onOpen={(pId) => navigate(`/orgs/${numOrgId}/projects/${pId}`)}
+              onRequestAccess={handleRequestAccess}
+              requesting={requestingId === project.id}
+            />
+          ))}
+        </div>
+      )}
 
       {showModal && (
         <NewProjectModal
+          orgId={numOrgId}
           onClose={() => setShowModal(false)}
           onCreated={() => {
             setShowModal(false);
@@ -139,7 +115,6 @@ export default function ProjectsGridPage() {
           }}
         />
       )}
-      </main>
     </div>
   );
 }
