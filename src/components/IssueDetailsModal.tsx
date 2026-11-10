@@ -5,10 +5,11 @@ import CommentSection from "./CommentSection";
 
 interface IssueDetailsModalProps {
   open: boolean;
+  orgId: number;
   onClose: () => void;
   issue: Issue | null;
   isLoggedIn: boolean;
-  currentUser: { id: number; name: string; role: string } | null;
+  currentUser: { id: number; name: string } | null;
 }
 
 function Badge({ children, color }: { children: React.ReactNode; color: string }) {
@@ -42,18 +43,13 @@ const approvalLabels: Record<string, string> = {
   rejected: "Rejected",
 };
 
-const roleColors: Record<string, string> = {
-  maintainer: "bg-indigo-500/15 text-indigo-400",
-  contributor: "bg-blue-500/15 text-blue-400",
-  client: "bg-amber-500/15 text-amber-400",
-};
-
-export default function IssueDetailsModal({ 
-  open, 
-  onClose, 
-  issue, 
-  isLoggedIn, 
-  currentUser 
+export default function IssueDetailsModal({
+  open,
+  orgId,
+  onClose,
+  issue,
+  isLoggedIn,
+  currentUser,
 }: IssueDetailsModalProps) {
   useEffect(() => {
     if (!open) return;
@@ -96,8 +92,17 @@ export default function IssueDetailsModal({
           </button>
         </div>
 
-
         <div className="px-6 py-4 space-y-6">
+          {/* Rejection reason banner if rejected */}
+          {issue.approval_status === "rejected" && issue.rejection_reason && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+              <h4 className="text-xs font-semibold uppercase text-red-400 tracking-wider mb-1">
+                Rejection Reason
+              </h4>
+              <p className="text-sm text-text-primary">{issue.rejection_reason}</p>
+            </div>
+          )}
+
           {issue.app_name && (
             <div>
               <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
@@ -116,24 +121,15 @@ export default function IssueDetailsModal({
             </p>
           </div>
 
-
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-bg-primary rounded-lg border border-border">
             <div>
               <h4 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
                 Reported By
               </h4>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-text-primary font-medium">
-                  {issue.reporter?.name ?? "Unknown"}
-                </span>
-                {issue.reporter?.role && (
-                  <Badge color={roleColors[issue.reporter.role]}>
-                    {issue.reporter.role}
-                  </Badge>
-                )}
-              </div>
+              <span className="text-sm text-text-primary font-medium">
+                {issue.reporter?.name ?? "Unknown"}
+              </span>
             </div>
-
 
             <div>
               <h4 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
@@ -142,14 +138,12 @@ export default function IssueDetailsModal({
               <p className="text-sm text-text-primary">{formatDate(issue.created_at)}</p>
             </div>
 
-
             <div>
               <h4 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
                 Last Updated
               </h4>
               <p className="text-sm text-text-primary">{formatDate(issue.updated_at)}</p>
             </div>
-
 
             <div>
               <h4 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
@@ -159,11 +153,12 @@ export default function IssueDetailsModal({
             </div>
           </div>
 
-
           <div className="border-t border-border pt-4">
             <h3 className="text-sm font-semibold text-text-primary mb-3">Comments</h3>
             <CommentSection
+              orgId={orgId}
               issueId={issue.id}
+              projectId={issue.project_id}
               isLoggedIn={isLoggedIn}
               currentUser={currentUser}
               alwaysExpanded={true}
