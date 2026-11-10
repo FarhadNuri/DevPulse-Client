@@ -9,27 +9,25 @@ import {
   closestCorners,
   type DragStartEvent,
   type DragEndEvent,
-  type DragOverEvent,
   useDroppable,
 } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { issues as issuesApi } from "../api";
-import { useAuth } from "../hooks";
+import { useAuth, useOrg } from "../hooks";
 import type { Issue, IssueType, IssueStatus } from "../types";
 import { formatDate, STATUS_LABELS, TYPE_LABELS, STATUS_VALUES } from "../utils";
 import toast from "react-hot-toast";
-import CommentSection from "./CommentSection";
 
 const typeColors: Record<string, string> = {
-  bug: "bg-bug/15 text-bug",
-  feature_request: "bg-feature/15 text-feature",
+  bug: "bg-red-500/15 text-red-400 border border-red-500/30",
+  feature_request: "bg-purple-500/15 text-purple-400 border border-purple-500/30",
 };
 
 const approvalColors: Record<string, string> = {
-  pending: "bg-amber-500/15 text-amber-500",
-  approved: "bg-green-500/15 text-green-500",
-  rejected: "bg-red-500/15 text-red-500",
+  pending: "bg-amber-500/15 text-amber-500 border border-amber-500/30",
+  approved: "bg-green-500/15 text-green-500 border border-green-500/30",
+  rejected: "bg-red-500/15 text-red-500 border border-red-500/30",
 };
 
 const approvalLabels: Record<string, string> = {
@@ -44,7 +42,18 @@ const columnConfig: { status: IssueStatus; label: string; accent: string }[] = [
   { status: "resolved", label: "Resolved", accent: "border-t-resolved" },
 ];
 
+function getInitials(name: string) {
+  if (!name) return "?";
+  return name
+    .split(" ")
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
 interface KanbanBoardProps {
+  orgId: number;
   issues: Issue[];
   canEdit: boolean;
   canDelete: boolean;
@@ -62,10 +71,9 @@ function SortableCard({
   onEdit,
   onDelete,
   disabled,
-  isLoggedIn,
-  currentUser,
   onViewDetails,
 }: {
+  orgId: number;
   issue: Issue;
   canEdit: boolean;
   canDelete: boolean;
@@ -73,7 +81,7 @@ function SortableCard({
   onDelete: (id: number) => void;
   disabled: boolean;
   isLoggedIn: boolean;
-  currentUser: { id: number; name: string; role: string } | null;
+  currentUser: { id: number; name: string } | null;
   onViewDetails: (issue: Issue) => void;
 }) {
   const {
@@ -96,119 +104,181 @@ function SortableCard({
       ref={setNodeRef}
       style={style}
       {...attributes}
-      {...listeners}
-      className={`bg-bg-secondary border border-border rounded-lg p-3 transition select-none ${disabled
-          ? "cursor-default"
-          : "cursor-grab active:cursor-grabbing hover:border-border-focus/30"
-        }`}
+      {...(!disabled ? listeners : {})}
+      className={`bg-bg-secondary border border-border rounded-lg p-3 transition select-none ${
+        disabled ? "" : "cursor-grab active:cursor-grabbing hover:border-border-focus/30"
+      }`}
     >
       <div
         className="cursor-pointer"
-        onClick={(e) => {
-          e.stopPropagation();
-          onViewDetails(issue);
-        }}
+        onClick={() => onViewDetails(issue)}
       >
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <h4 className="text-sm font-semibold text-text-primary leading-snug">{issue.title}</h4>
-          <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-start justify-between gap-2">
+          <h4 className="text-sm font-semibold text-text-primary line-clamp-2">
+            {issue.title}
+          </h4>
+          <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
             {canEdit && (
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit(issue);
-                }}
-                className="text-xs text-text-muted hover:text-text-primary transition px-1 py-0.5 rounded hover:bg-bg-tertiary cursor-pointer"
+                onClick={() => onEdit(issue)}
+                className="text-xs text-text-muted hover:text-text-primary transition p-1 hover:bg-bg-tertiary rounded cursor-pointer"
+                title="Edit"
               >
-                Edit
+                ✏️
               </button>
             )}
             {canDelete && (
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(issue.id);
-                }}
-                className="text-xs text-text-muted hover:text-red-400 transition px-1 py-0.5 rounded hover:bg-bg-tertiary cursor-pointer"
+                onClick={() => onDelete(issue.id)}
+                className="text-xs text-text-muted hover:text-red-400 transition p-1 hover:bg-red-500/10 rounded cursor-pointer"
+                title="Delete"
               >
-                Delete
+                🗑️
               </button>
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className={`text-xs font-medium rounded-md px-2 py-0.5 ${typeColors[issue.type]}`}>
+
+        {issue.description && (
+          <p className="text-xs text-text-muted mt-1 line-clamp-2 leading-relaxed">
+            {issue.description}
+          </p>
+        )}
+
+        {/* Labels chips */}
+        {issue.labels && issue.labels.length > 0 && (
+          <div className="flex items-center gap-1 mt-2 flex-wrap">
+            {issue.labels.map((lbl) => (
+              <span
+                key={lbl.id}
+                style={{
+                  backgroundColor: `${lbl.color}20`,
+                  color: lbl.color,
+                  borderColor: `${lbl.color}40`,
+                }}
+                className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full border truncate max-w-[100px]"
+              >
+                {lbl.name}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+          <span className="text-[10px] font-mono font-semibold text-text-muted bg-bg-tertiary px-1.5 py-0.5 rounded border border-border">
+            #{issue.id}
+          </span>
+          <span
+            className={`text-[10px] font-medium rounded-md px-1.5 py-0.5 ${
+              typeColors[issue.type]
+            }`}
+          >
             {TYPE_LABELS[issue.type] ?? issue.type}
           </span>
           {issue.approval_status && (
-            <span className={`text-xs font-medium rounded-md px-2 py-0.5 ${approvalColors[issue.approval_status]}`}>
+            <span
+              className={`text-[10px] font-medium rounded-md px-1.5 py-0.5 ${
+                approvalColors[issue.approval_status]
+              }`}
+            >
               {approvalLabels[issue.approval_status] ?? issue.approval_status}
             </span>
           )}
-          <span className="text-xs text-text-muted ml-auto">
-            {issue.reporter?.name ?? "Unknown"} · {formatDate(issue.created_at)}
-          </span>
+        </div>
+
+        <div className="flex items-center justify-between text-xs text-text-muted mt-2 pt-2 border-t border-border">
+          <div className="flex items-center gap-1.5 min-w-0">
+            {issue.assignee ? (
+              <div
+                className="w-4 h-4 rounded-full bg-accent/20 text-accent font-bold text-[9px] flex items-center justify-center shrink-0 border border-accent/40"
+                title={`Assigned to ${issue.assignee.name}`}
+              >
+                {getInitials(issue.assignee.name)}
+              </div>
+            ) : null}
+            <span className="truncate max-w-[90px]">{issue.reporter?.name ?? "Unknown"}</span>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {(Number(issue.comment_count) > 0 || issue.comment_count === 0) && (
+              <span className="flex items-center gap-1 text-[11px]">
+                <span>💬</span>
+                <span>{issue.comment_count || 0}</span>
+              </span>
+            )}
+            <span>{formatDate(issue.created_at)}</span>
+          </div>
         </div>
       </div>
-
-      <div onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
-        <CommentSection
-          issueId={issue.id}
-          isLoggedIn={isLoggedIn}
-          currentUser={currentUser}
-        />
-      </div>
     </div>
   );
 }
 
-function DragOverlayCard({ issue }: { issue: Issue }) {
+function CardOverlay({ issue }: { issue: Issue }) {
   return (
-    <div className="bg-bg-secondary border border-border-focus rounded-lg p-3 shadow-xl rotate-1">
-      <h4 className="text-sm font-semibold text-text-primary leading-snug mb-2">{issue.title}</h4>
-      <div className="flex items-center gap-2">
-        <span className={`text-xs font-medium rounded-md px-2 py-0.5 ${typeColors[issue.type]}`}>
+    <div className="bg-bg-secondary border-2 border-accent rounded-lg p-3 shadow-xl opacity-90 rotate-1 max-w-sm">
+      <h4 className="text-sm font-semibold text-text-primary line-clamp-2">
+        {issue.title}
+      </h4>
+      <p className="text-xs text-text-muted mt-1 line-clamp-2">
+        {issue.description}
+      </p>
+      <div className="flex items-center gap-1.5 mt-2">
+        <span className="text-xs font-mono font-semibold text-text-muted bg-bg-tertiary px-1.5 py-0.5 rounded border border-border">
+          #{issue.id}
+        </span>
+        <span
+          className={`text-xs font-medium rounded-md px-2 py-0.5 ${
+            typeColors[issue.type]
+          }`}
+        >
           {TYPE_LABELS[issue.type] ?? issue.type}
         </span>
-        {issue.approval_status && (
-          <span className={`text-xs font-medium rounded-md px-2 py-0.5 ${approvalColors[issue.approval_status]}`}>
-            {approvalLabels[issue.approval_status] ?? issue.approval_status}
-          </span>
-        )}
-        <span className="text-xs text-text-muted">
-          {issue.reporter?.name ?? "Unknown"}
-        </span>
       </div>
     </div>
   );
 }
 
-function DroppableColumn({
-  children,
+function KanbanColumn({
   id,
-  isOver
+  label,
+  children,
+  count,
 }: {
+  id: IssueStatus;
+  label: string;
+  accent: string;
+  count: number;
   children: ReactNode;
-  id: string;
-  isOver: boolean;
 }) {
-  const { setNodeRef } = useDroppable({ id });
+  const { isOver, setNodeRef } = useDroppable({ id });
 
   return (
     <div
       ref={setNodeRef}
-      className={`rounded-lg border border-border border-t-2 ${id === 'open' ? 'border-t-open' :
-          id === 'in_progress' ? 'border-t-in-progress' :
-            'border-t-resolved'
-        } bg-bg-primary flex flex-col max-h-[calc(100vh-14rem)] transition-colors ${isOver ? "bg-bg-tertiary/20" : ""
-        }`}
+      className={`rounded-lg border border-border border-t-2 ${
+        id === "open"
+          ? "border-t-open"
+          : id === "in_progress"
+          ? "border-t-in-progress"
+          : "border-t-resolved"
+      } bg-bg-primary flex flex-col min-h-[160px] transition-colors ${
+        isOver ? "bg-bg-tertiary/20" : ""
+      }`}
     >
-      {children}
+      <div className="p-3 border-b border-border flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-text-primary">{label}</h3>
+        <span className="text-xs font-mono bg-bg-secondary text-text-secondary rounded-full px-2 py-0.5">
+          {count}
+        </span>
+      </div>
+      <div className="p-2 space-y-2 flex-1">{children}</div>
     </div>
   );
 }
 
 export default function KanbanBoard({
+  orgId,
   issues,
   canEdit,
   canDelete,
@@ -219,9 +289,8 @@ export default function KanbanBoard({
   onViewDetails,
 }: KanbanBoardProps) {
   const { isLoggedIn, user } = useAuth();
+  const { isGuest } = useOrg();
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [overColumn, setOverColumn] = useState<string | null>(null);
-  const [pendingDragId, setPendingDragId] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -251,34 +320,15 @@ export default function KanbanBoard({
     setActiveId(String(event.active.id));
   }, []);
 
-  const handleDragOver = useCallback((event: DragOverEvent) => {
-    const over = event.over;
-    if (!over) {
-      setOverColumn(null);
-      return;
-    }
-    const overId = String(over.id);
-    if (STATUS_VALUES.includes(overId as IssueStatus)) {
-      setOverColumn(overId);
-    } else {
-      const overIssue = issues.find((i) => String(i.id) === overId);
-      if (overIssue) {
-        const normalized = overIssue.status.toLowerCase().replace(/\s+/g, "_");
-        setOverColumn(normalized);
-      }
-    }
-  }, [issues]);
-
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
       const { active, over } = event;
       setActiveId(null);
-      setOverColumn(null);
 
-      if (!over || !isLoggedIn) return;
+      // Clients and guests are strictly read-only on the board
+      if (!over || !isLoggedIn || isGuest) return;
 
       const issueId = Number(active.id);
-
       let targetStatus: IssueStatus | null = null;
       const overId = String(over.id);
 
@@ -300,94 +350,75 @@ export default function KanbanBoard({
       const currentNormalized = currentIssue.status.toLowerCase().replace(/\s+/g, "_");
       if (currentNormalized === targetStatus) return;
 
-      setPendingDragId(String(issueId));
-
       try {
-        const sampleIssueInTargetColumn = issues.find((i) => {
-          const normalized = i.status.toLowerCase().replace(/\s+/g, "_");
-          return normalized === targetStatus;
-        });
-
-        const statusToSend = sampleIssueInTargetColumn?.status || targetStatus;
-
-        await issuesApi.update(issueId, {
-          status: statusToSend as any,
-        });
+        await issuesApi.update(orgId, issueId, { status: targetStatus });
         toast.success(`Moved to ${STATUS_LABELS[targetStatus]}`);
         onRefetch();
       } catch (err: unknown) {
-        toast.error(err instanceof Error ? err.message : "Failed to move issue");
-      } finally {
-        setPendingDragId(null);
+        toast.error(err instanceof Error ? err.message : "Failed to update issue status");
       }
     },
-    [issues, isLoggedIn, onRefetch],
+    [issues, isLoggedIn, isGuest, orgId, onRefetch],
   );
 
-  return (
-    <div className="relative">
-      {!isLoggedIn && (
-        <div className="absolute top-0 left-0 right-0 z-10 text-center py-2">
-          <span className="text-xs text-text-muted bg-bg-tertiary/80 rounded-full px-3 py-1">
-            Login to move issues
-          </span>
-        </div>
-      )}
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCorners}
-        onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
-        onDragEnd={handleDragEnd}
-      >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {columnConfig.map(({ status, label }) => {
-            const columnIssues = columns[status] ?? [];
-            const isOver = overColumn === status;
+  // Clients/guests cannot drag
+  const isDndDisabled = isGuest || !canEdit;
 
-            return (
-              <DroppableColumn key={status} id={status} isOver={isOver}>
-                <SortableContext
-                  id={status}
-                  items={columnIssues.map((i) => String(i.id))}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <div className="flex-1 p-3 space-y-2 overflow-y-auto min-h-[6rem]">
-                    <div className="flex items-center gap-2 mb-3 sticky top-0 bg-bg-primary py-1 z-10">
-                      <h3 className="text-sm font-semibold text-text-primary">{label}</h3>
-                      <span className="text-xs font-mono text-text-muted bg-bg-tertiary rounded-full px-2 py-0.5">
-                        {columnIssues.length}
-                      </span>
-                    </div>
-                    {columnIssues.map((issue) => (
-                      <div
-                        key={issue.id}
-                        className={`transition-opacity ${pendingDragId === String(issue.id) ? "opacity-50" : ""
-                          }`}
-                      >
-                        <SortableCard
-                          issue={issue}
-                          canEdit={canEdit}
-                          canDelete={canDelete}
-                          onEdit={onEdit}
-                          onDelete={onDelete}
-                          disabled={!isLoggedIn}
-                          isLoggedIn={isLoggedIn}
-                          currentUser={user}
-                          onViewDetails={onViewDetails}
-                        />
-                      </div>
-                    ))}
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCorners}
+      onDragStart={!isDndDisabled ? handleDragStart : undefined}
+      onDragEnd={!isDndDisabled ? handleDragEnd : undefined}
+    >
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {columnConfig.map((col) => {
+          const colIssues = columns[col.status] || [];
+          return (
+            <KanbanColumn
+              key={col.status}
+              id={col.status}
+              label={col.label}
+              accent={col.accent}
+              count={colIssues.length}
+            >
+              <SortableContext
+                items={colIssues.map((i) => String(i.id))}
+                strategy={verticalListSortingStrategy}
+                disabled={isDndDisabled}
+              >
+                {colIssues.length === 0 ? (
+                  <div className="text-center py-8 text-xs text-text-muted italic">
+                    No issues
                   </div>
-                </SortableContext>
-              </DroppableColumn>
-            );
-          })}
-        </div>
+                ) : (
+                  colIssues.map((issue) => (
+                    <SortableCard
+                      key={issue.id}
+                      orgId={orgId}
+                      issue={issue}
+                      canEdit={canEdit && !isGuest}
+                      canDelete={canDelete && !isGuest}
+                      onEdit={onEdit}
+                      onDelete={onDelete}
+                      disabled={isDndDisabled}
+                      isLoggedIn={isLoggedIn}
+                      currentUser={user}
+                      onViewDetails={onViewDetails}
+                    />
+                  ))
+                )}
+              </SortableContext>
+            </KanbanColumn>
+          );
+        })}
+      </div>
+
+      {!isDndDisabled && (
         <DragOverlay>
-          {activeIssue ? <DragOverlayCard issue={activeIssue} /> : null}
+          {activeIssue ? <CardOverlay issue={activeIssue} /> : null}
         </DragOverlay>
-      </DndContext>
-    </div>
+      )}
+    </DndContext>
   );
 }
