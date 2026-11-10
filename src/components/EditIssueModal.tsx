@@ -1,19 +1,27 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { issues } from "../api";
-import { useAuth } from "../hooks";
+import { useAuth, useOrg } from "../hooks";
 import type { Issue, IssueType, IssueStatus } from "../types";
 import toast from "react-hot-toast";
 import Modal from "./Modal";
 
 interface Props {
   open: boolean;
+  orgId: number;
   onClose: () => void;
   issue: Issue | null;
   onUpdated: () => void;
 }
 
-export default function EditIssueModal({ open, onClose, issue, onUpdated }: Props) {
+export default function EditIssueModal({
+  open,
+  orgId,
+  onClose,
+  issue,
+  onUpdated,
+}: Props) {
   const { isLoggedIn } = useAuth();
+  const { isGuest } = useOrg();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [type, setType] = useState<IssueType>("bug");
@@ -38,7 +46,11 @@ export default function EditIssueModal({ open, onClose, issue, onUpdated }: Prop
     }
     setLoading(true);
     try {
-      await issues.update(issue.id, { title, description, type, status });
+      const payload: any = { title, description, type };
+      if (!isGuest) {
+        payload.status = status;
+      }
+      await issues.update(orgId, issue.id, payload);
       toast.success("Issue updated");
       onUpdated();
       onClose();
@@ -87,22 +99,24 @@ export default function EditIssueModal({ open, onClose, issue, onUpdated }: Prop
               <option value="feature_request">Feature Request</option>
             </select>
           </div>
-          <div>
-            <label className="block text-sm text-text-secondary mb-1">Status</label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value as IssueStatus)}
-              className="w-full bg-bg-primary border border-border rounded-md px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-border-focus transition"
-            >
-              <option value="open">Open</option>
-              <option value="in_progress">In Progress</option>
-              <option value="resolved">Resolved</option>
-            </select>
-          </div>
+          {!isGuest && (
+            <div>
+              <label className="block text-sm text-text-secondary mb-1">Status</label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value as IssueStatus)}
+                className="w-full bg-bg-primary border border-border rounded-md px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-border-focus transition"
+              >
+                <option value="open">Open</option>
+                <option value="in_progress">In Progress</option>
+                <option value="resolved">Resolved</option>
+              </select>
+            </div>
+          )}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-accent hover:bg-accent-hover text-white font-medium text-sm rounded-md py-2 transition disabled:opacity-50"
+            className="w-full bg-accent hover:bg-accent-hover text-white font-medium text-sm rounded-md py-2 transition disabled:opacity-50 cursor-pointer"
           >
             {loading ? "Saving..." : "Save Changes"}
           </button>
