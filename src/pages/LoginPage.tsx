@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { auth } from "../api";
 import { useAuth } from "../hooks";
+import Logo from "../components/Logo";
 import toast from "react-hot-toast";
 
 export default function LoginPage() {
@@ -9,11 +10,24 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const { login, isLoggedIn, isLoading } = useAuth();
+  const { loginWithToken, isLoggedIn, isLoading, organizations } = useAuth();
   const navigate = useNavigate();
 
   if (!isLoading && isLoggedIn) {
-    navigate("/", { replace: true });
+    if (!organizations || organizations.length === 0) {
+      navigate("/dashboard", { replace: true });
+    } else {
+      let targetOrgId = organizations[0].id;
+      try {
+        const saved = localStorage.getItem("devpulse_last_org");
+        if (saved && organizations.some((o) => o.id === Number(saved))) {
+          targetOrgId = Number(saved);
+        }
+      } catch {
+        // Ignore localStorage error
+      }
+      navigate(`/orgs/${targetOrgId}/projects`, { replace: true });
+    }
     return null;
   }
 
@@ -21,11 +35,33 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
+
     try {
-      const res = await auth.login({ email, password });
-      login(res.token, res.user);
+      const res = await auth.login({ email: email.trim(), password });
+      // Call GET /auth/me via loginWithToken to load user profile and organizations
+      const meData = await loginWithToken(res.token);
+
       toast.success("Logged in");
-      navigate("/");
+
+      if (meData.user?.is_super_admin) {
+        navigate("/admin", { replace: true });
+        return;
+      }
+
+      if (!meData.organizations || meData.organizations.length === 0) {
+        navigate("/dashboard", { replace: true });
+      } else {
+        let targetOrgId = meData.organizations[0].id;
+        try {
+          const saved = localStorage.getItem("devpulse_last_org");
+          if (saved && meData.organizations.some((o) => o.id === Number(saved))) {
+            targetOrgId = Number(saved);
+          }
+        } catch {
+          // Ignore localStorage error
+        }
+        navigate(`/orgs/${targetOrgId}/projects`, { replace: true });
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
@@ -36,9 +72,15 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-bg-primary flex items-center justify-center px-4">
       <div className="w-full max-w-sm md:max-w-md lg:max-w-lg">
-        <h1 className="text-3xl md:text-4xl font-bold text-text-primary text-center mb-8 md:mb-10">
-          <span className="text-accent">Dev</span>Pulse
-        </h1>
+        <div className="flex justify-center mb-8 md:mb-10">
+          <Link
+            to="/"
+            className="inline-flex focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg-primary rounded-xl transition hover:opacity-90 active:scale-[0.98]"
+            aria-label="DevPulse Home"
+          >
+            <Logo size="lg" />
+          </Link>
+        </div>
         <form
           onSubmit={handleSubmit}
           className="bg-bg-secondary border border-border rounded-lg p-6 md:p-8 lg:p-10 space-y-5 md:space-y-6"
